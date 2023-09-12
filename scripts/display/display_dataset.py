@@ -5,6 +5,7 @@ from scripts.display.DisplayDataset import DisplayDataset
 import sys
 
 config = sys.argv[1] 
+print(config)
 name = sys.argv[2]
 
 cfg = read_config(config)

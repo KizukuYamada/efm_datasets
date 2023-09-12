@@ -47,7 +47,7 @@ PDv2:
     path: [/data/datasets/tiny/PDv2_tiny/pdv2_tiny.json]
     split: [train]
     resolution: [[384,640]]
-    context: [-2,2]
+    context: [-1,1]
     cameras: [[1,5,6,7,8,9]]
     labels: [intrinsics,depth,pose,optical_flow]
     labels_context: [intrinsics,depth,pose,optical_flow]

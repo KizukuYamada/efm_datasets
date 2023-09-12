@@ -1,4 +1,4 @@
-PROJECT ?= efm_datasets
+PROJECT ?= vidar_zerodepth2
 WORKSPACE ?= /workspace/$(PROJECT)
 DOCKER_IMAGE ?= ${PROJECT}:latest
 
@@ -46,7 +46,7 @@ clean:
 
 docker-build:
 	docker build \
-		-f docker/Dockerfile \
+		-f docker/Dockerfile_vidar_zero \
 		-t ${DOCKER_IMAGE} .
 
 docker-interactive: docker-build

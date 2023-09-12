@@ -55,10 +55,6 @@ RUN pip install \
     wget \
     nuscenes-devkit==1.1.7
 
-RUN pip install \
-    lpips \
-    scikit-image
-
 # Install CamViz dependencies
 RUN pip install \
     pygame==2.0.1 \

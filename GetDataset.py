@@ -10,7 +10,6 @@ from efm_datasets.utils.geometry.pose import Pose
 from efm_datasets.utils.data import make_batch, fold_batch, get_from_dict, interleave_dict, modrem
 from efm_datasets.utils.depth import calculate_normals
 from efm_datasets.utils.viz import viz_depth, viz_optical_flow, viz_semantic, viz_normals
-import pdb
 
 
 def change_key(data, c, n):
@@ -18,7 +17,7 @@ def change_key(data, c, n):
     return steps[(steps.index(c) + n) % len(steps)]
 
 
-class DisplayDataset:
+class GetDataset:
     def __init__(self, dataset, virtual_pose=None):
 
         self.idx = 0
@@ -30,7 +29,7 @@ class DisplayDataset:
         self.offset = [None, None, None, None, -1, 1]
 
         data, wh, keys, offsets, cams, num_cams, points, points_normals, actions, language = self.process()
-        
+
         self.draw = Draw((wh[0] * 4, wh[1] * 3), width=2100)
         self.draw.add2DimageGrid('img', (0.0, 0.0, 0.5, 1.0), n=(max(3, num_cams // 2), 2), res=wh)
         self.draw.add3Dworld('wld', (0.5, 0.0, 1.0, 1.0),
@@ -203,22 +202,3 @@ class DisplayDataset:
                             self.draw['wld'].text(string, (0, j + 2))
 
             self.draw.update(30)
-            
-    def infer(self):
-        data = self.dataset[self.idx]
-
-        data = make_batch(data)
-        data = fold_batch(data)
-
-        rgb = data['rgb'][(0, 0)]
-        intrinsics = get_from_dict(data, 'intrinsics')[(0, 0)]
-        # pdb.set_trace()
-        # print(rgb[(0, 0)])
-        # print(intrinsics[(0, 0)])
-        # print(rgb[(0, 0)].shape)
-        # print(intrinsics[(0, 0)].shape)
-        # print(rgb)
-        # print(intrinsics)
-        # print(rgb.shape)
-        # print(intrinsics.shape)
-        return rgb, intrinsics
