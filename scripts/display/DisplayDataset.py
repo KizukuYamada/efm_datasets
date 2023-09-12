@@ -212,13 +212,5 @@ class DisplayDataset:
 
         rgb = data['rgb'][(0, 0)]
         intrinsics = get_from_dict(data, 'intrinsics')[(0, 0)]
-        # pdb.set_trace()
-        # print(rgb[(0, 0)])
-        # print(intrinsics[(0, 0)])
-        # print(rgb[(0, 0)].shape)
-        # print(intrinsics[(0, 0)].shape)
-        # print(rgb)
-        # print(intrinsics)
-        # print(rgb.shape)
-        # print(intrinsics.shape)
+
         return rgb, intrinsics
