@@ -6,6 +6,7 @@ import pdb
 from efm_datasets.utils.config import read_config
 from efm_datasets.utils.setup import setup_dataset
 from efm_datasets.utils.data import make_batch, fold_batch, get_from_dict, interleave_dict, modrem
+from efm_datasets.utils.viz import viz_depth
 from scripts.display.DisplayDataset import DisplayDataset
 import sys
 import os
@@ -39,20 +40,10 @@ zerodepth_model = torch.hub.load("TRI-ML/vidar", "ZeroDepth", pretrained=True, t
 
 # rgbサイズを384*640に変換し、それに合わせてintrinsicsも変換する関数
 def resize_rgb_intrinsics(rgb, intrinsics):
-    pdb.set_trace()
     #rgbの幅と高さを取得
     rgb_h, rgb_w = rgb.shape[2], rgb.shape[3]
     #rgbを[1,3,height,width]の形状から[1,3,384,640]の形状に変換
     resized_tensor = torch.nn.functional.interpolate(rgb, size=(384, 640), mode='bilinear', align_corners=False)
-    # scaled_image = (rgb * 255).astype(np.uint8)
-    # # 画像を指定したサイズにリサイズ
-    # resized_image = cv2.resize(scaled_image, (640, 384))
-    # # リサイズ後の画像を0から1の範囲に戻す
-    # resized_image = resized_image / 255.0
-    # リサイズ
-    # resized_tensor = cv2.resize(rgb.transpose(0, 2, 3, 1), (640, 384), interpolation=cv2.INTER_LINEAR)
-    # resized_tensor = resized_tensor.transpose(0, 3, 1, 2)
-    # resized_tensor は [1, 3, 384, 640] のテンソルになります
     print(rgb.shape)
     intrinsics2 = intrinsics.clone()
     fx_new = intrinsics[0,0,0].item()*640/rgb_w
@@ -67,8 +58,8 @@ def resize_rgb_intrinsics(rgb, intrinsics):
     print("intrinsics:", intrinsics)
     return resized_tensor, intrinsics2
 
-rgb, intrinsics = resize_rgb_intrinsics(rgb, intrinsics)
-depth_pred = zerodepth_model(rgb, intrinsics)
+rgb2, intrinsics2 = resize_rgb_intrinsics(rgb, intrinsics)
+depth_pred = zerodepth_model(rgb2, intrinsics2)
 print(depth_pred)
 
 ## depth_predをNumPy配列に変換して勾配情報を切り離して、CPUに送って、次元削減
@@ -90,7 +81,9 @@ def depth_to_rgb(depth_data, depth_min, depth_max):
     depth_rgb = cv2.applyColorMap(depth_scaled, cv2.COLORMAP_JET)
     return depth_rgb
 
-
+# viz_depthを使ってdepthを可視化
+depth_rgb_image_vizdepth = viz_depth(depth_pred) 
+print(depth_rgb_image_vizdepth.shape)   
 
 ## depthをRGBに変換
 depth_rgb_image = depth_to_rgb(depth_pred_np, depth_pred_min, depth_pred_max)
@@ -99,4 +92,6 @@ depth_rgb_image = depth_to_rgb(depth_pred_np, depth_pred_min, depth_pred_max)
 # cv2.imwrite("depth.png", depth_pred_np)
 ## RGBoutputを保存
 cv2.imwrite(f"Infe_data/{name}/depth_color.png", depth_rgb_image)
+#RGBoutput2を保存
+write_image(f"Infe_data/{name}/depth_c_inv.png", depth_rgb_image_vizdepth)
 print("最後まできたよ")

@@ -70,3 +70,29 @@ def write_empty_txt(filename, folder):
     """Write an empty txt file to filename"""
     os.makedirs(folder, exist_ok=True)
     with open(f'{folder}/{filename.replace("/", "|")}.txt', 'w') as f: pass
+    
+@multi_write    
+def write_image(filename, image):
+    """    Write an image to file
+
+    Parameters
+    ----------
+    filename : String
+        File where image will be saved
+    image : np.Array [H,W,3]
+        RGB image
+    """
+    # Create folder if it doesn't exist
+    create_folder(filename)
+    # If image is a tensor
+    if is_tensor(image):
+        if len(image.shape) == 4:
+            image = image[0]
+        image = image.detach().cpu().numpy().transpose(1, 2, 0)
+        cv2.imwrite(filename, image[:, :, ::-1] * 255)
+    # If image is a numpy array
+    elif isinstance(image, np.ndarray):
+        cv2.imwrite(filename, image[:, :, ::-1] * 255)
+    # Otherwise, assume it's a PIL image
+    else:
+        image.save(filename)

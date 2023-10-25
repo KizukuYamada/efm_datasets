@@ -9,6 +9,16 @@ KITTI:
     labels_context: [intrinsics,depth,pose]
     depth_type: [velodyne]
 ####################
+Driving_Stereo:
+    name: [DrivingStereo]
+    path: [/data/datasets/tiny/DrivingStereo_tiny]
+    split: [driving_stereo_tiny.txt]
+    context: [-1,1]
+    cameras: [[0,1]]
+    labels: [intrinsics,depth]
+    labels_context: [intrinsics,depth]
+    depth_type: [velodyne]
+####################
 VKITTI2:
     name: [VKITTI2]
     path: [/data/datasets/tiny/VKITTI2_tiny]
@@ -124,4 +134,5 @@ Omnidata_replica_gso:
     labels_context: [intrinsics,depth,pose]
     filter_invalid: [False]
 ####################
+
 
