@@ -7,6 +7,7 @@ from efm_datasets.utils.decorators import multi_write
 from efm_datasets.utils.types import is_tensor
 import torchvision.transforms as transforms
 import numpy as np
+import cv2 
 
 
 def create_folder(filename):

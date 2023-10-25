@@ -7,6 +7,7 @@ from efm_datasets.utils.config import read_config
 from efm_datasets.utils.setup import setup_dataset
 from efm_datasets.utils.data import make_batch, fold_batch, get_from_dict, interleave_dict, modrem
 from efm_datasets.utils.viz import viz_depth
+from efm_datasets.utils.write import write_image
 from scripts.display.DisplayDataset import DisplayDataset
 import sys
 import os
