@@ -17,9 +17,15 @@ print(config)
 name = sys.argv[2]
 cfg = read_config(config)
 
+## 設定を上書き
+time_range = [-1,1]
+add_idx = 1 #range内のどこのデータを表示するか指定します。
+current_object = getattr(cfg, name)# getattr関数を使って、現在のオブジェクトを取得します。
+setattr(current_object, 'context', time_range)# 時間的にどこからどこまでのデータを使うかを指定します。[-1,1]なら、現在のフレームと前後1フレームのデータを使います。
+
 dataset = setup_dataset(cfg.dict[name])[0]
-display = DisplayDataset(dataset)
-rgb, intrinsics = display.infer()
+# display = DisplayDataset(dataset)
+rgb, intrinsics = DisplayDataset.infer(dataset)
 
 ## フォルダを作成
 if not os.path.exists(f"Infe_data/{name}"):

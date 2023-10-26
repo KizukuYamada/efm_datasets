@@ -53,7 +53,7 @@ class DisplayDataset:
             self.draw.addBufferf('pointcache', pointcache[:, :3])
 
     def process(self):
-
+        
         data = self.dataset[self.idx]
 
         data = make_batch(data)
@@ -203,14 +203,24 @@ class DisplayDataset:
                             self.draw['wld'].text(string, (0, j + 2))
 
             self.draw.update(30)
-            
-    def infer(self):
-        data = self.dataset[self.idx]
+    
+    @staticmethod   
+    def infer(dataset):
+        
+        idx = 0
+        tgt = (0, 0)
+        dataset = dataset
+
+        tasks = ['rgb', 'depth']
+        cam_colors = ['red', 'blu', 'gre', 'yel', 'mag', 'cya'] * 100
+        offset = [None, None, None, None, -1, 1]
+        
+        data = dataset[idx]
 
         data = make_batch(data)
         data = fold_batch(data)
 
-        rgb = data['rgb'][(0, 0)]
-        intrinsics = get_from_dict(data, 'intrinsics')[(0, 0)]
+        rgb = data['rgb'][(2, 1)]#(時間差,カメラ)
+        intrinsics = get_from_dict(data, 'intrinsics')[(2, 1)]
 
         return rgb, intrinsics

@@ -63,7 +63,7 @@ class DrivingStereoDataset(BaseDataset):
         super().__init__(**kwargs, base_tag='drivingstereo')
         
         # Store variables
-
+        
         self.baseline = + 0.5407
         self.backward_context_paths = []
         self.forward_context_paths = []
@@ -96,7 +96,7 @@ class DrivingStereoDataset(BaseDataset):
                 add_flag = depth is not None and os.path.exists(depth)
             if add_flag:
                 self.paths.append(path)
-
+        
         # If using context, filter file list
         
         if self.with_context:
@@ -106,6 +106,7 @@ class DrivingStereoDataset(BaseDataset):
                     backward_context_idxs, forward_context_idxs = \
                         self._get_sample_context(
                             file, self.bwd_context, self.fwd_context, stride)
+                    
                     if backward_context_idxs is not None and forward_context_idxs is not None:
                         exists = True
                         if self.with_depth_context:
@@ -120,7 +121,7 @@ class DrivingStereoDataset(BaseDataset):
                             self.forward_context_paths.append(forward_context_idxs)
                             self.backward_context_paths.append(backward_context_idxs[::-1])
             self.paths = paths_with_context
-
+        
         if len(self.cameras) > 1:
             self.paths = [im.replace('image_03', 'image_02') for im in self.paths]
 
@@ -146,7 +147,12 @@ class DrivingStereoDataset(BaseDataset):
         for cam in ['left', 'right']:
             # Check for both cameras, if found replace and return intrinsics
             if IMAGE_FOLDER[cam] in image_file:
-                return np.reshape(calib_data[IMAGE_FOLDER[cam].replace('image', 'P_rect')], (3, 4))[:, :3]
+                t_num = re.findall(r'\d', IMAGE_FOLDER[cam])
+                result_str = ''.join(t_num)
+                result_int = int(result_str)
+                t_num2 = 97 + result_int * 2 #101 and 103
+                return np.reshape(calib_data[f'P_rect_{t_num2}'], (3, 4))[:, :3]
+                # return np.reshape(calib_data[IMAGE_FOLDER[cam].replace('image', 'P_rect')], (3, 4))[:, :3]
 
     @staticmethod
     def _read_raw_calib_file(folder):
@@ -202,7 +208,7 @@ class DrivingStereoDataset(BaseDataset):
         base, ext = os.path.splitext(os.path.basename(sample_name))
         parent_folder = os.path.dirname(sample_name)
         # 数字のみを抽出する正規表現
-        pdb.set_trace()
+        # pdb.set_trace()
         base = re.sub(r'\D', '', base)
         f_idx = int(base)
 
@@ -292,6 +298,7 @@ class DrivingStereoDataset(BaseDataset):
 
     def _get_pose(self, image_file, camera):
         """Gets the pose information from an image file."""
+        # pdb.set_trace()
         if image_file in self.pose_cache:
             return self.pose_cache[image_file]
         # Find origin frame in this sequence to determine scale & origin translation
@@ -333,6 +340,7 @@ class DrivingStereoDataset(BaseDataset):
         for cam_idx, cam in enumerate(self.cameras):
 
             # Get target filename and prepare key tuple
+            
             filename = self.paths[idx] if cam == 0 else self.paths_stereo[idx]
             time_cam = (0, cam_idx)
             update_dict(sample, 'filename', time_cam, filename)
