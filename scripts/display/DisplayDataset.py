@@ -228,4 +228,4 @@ class DisplayDataset:
         #数字部分のみ抽出して数値に変換
         filename = filename.split(".")[0]
         # filename = dataset._get_filename(add_idx)
-        return rgb, intrinsics, filename
+        return rgb, intrinsics, filepath, filename

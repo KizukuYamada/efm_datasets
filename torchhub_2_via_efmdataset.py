@@ -18,98 +18,97 @@ name = sys.argv[2]
 cfg = read_config(config)
 
 ## 設定を上書き
-time_range = [-5,5]
-add_idx = 5 #range内のどこのデータを表示するか指定します。
-if time_range[0] <= add_idx <= time_range[1]:
-    # add_idx is within the time_range, so keep its value
-    pass  # This pass statement is optional and just keeps the structure clear
+time_range = [-3,3]
+infe_camera = 1 #どのカメラのデータを表示するか指定します。0なら左、1なら右です。
+infe_range = [-1,1]
+# 解析範囲がtime_rangeを超えていたら、time_rangeに合わせる
+if time_range[0] <= infe_range[0]:
+    pass
 else:
-    # add_idx is outside the time_range, so reset its value to 0
-    add_idx = 0
-infe_camera = 0 #どのカメラのデータを表示するか指定します。0なら左、1なら右です。
-current_object = getattr(cfg, name)# getattr関数を使って、現在のオブジェクトを取得します。
-setattr(current_object, 'context', time_range)# 時間的にどこからどこまでのデータを使うかを指定します。[-1,1]なら、現在のフレームと前後1フレームのデータを使います。
+    infe_range[0] = time_range[0]
+if infe_range[1] <= time_range[1]:
+    pass
+else:
+    infe_range[1] = time_range[1]
 
-dataset = setup_dataset(cfg.dict[name])[0]
-# display = DisplayDataset(dataset)
-rgb, intrinsics, filename = DisplayDataset.infer(dataset,add_idx,infe_camera)
-pdb.set_trace()
-## フォルダを作成
-if not os.path.exists(f"Infe_data/{name}"):
-    os.mkdir(f"Infe_data/{name}")
-os.chmod(f"Infe_data/{name}", 0o777)
+for i in range(infe_range[0],infe_range[1]+1):
+    add_idx = i #range内のどこのデータを表示するか指定します。
+    current_object = getattr(cfg, name)# getattr関数を使って、現在のオブジェクトを取得します。
+    setattr(current_object, 'context', time_range)# 時間的にどこからどこまでのデータを使うかを指定します。[-1,1]なら、現在のフレームと前後1フレームのデータを使います。
 
-## original画像をNumPy配列に変換して表示
-# rgb_np = cv2.imread('/data/datasets/tiny/DDAD_tiny/000150/rgb_384_640/CAMERA_01/15616458296936490.jpg')
-# print(rgb_np)
-rgb_disp = rgb.squeeze().cpu().detach().numpy()
-rgb_disp = np.transpose(rgb_disp, (1, 2, 0))
-rgb_disp = cv2.cvtColor((rgb_disp*255).astype(np.uint8),cv2.COLOR_RGB2BGR)
-# print(rgb_disp)
+    dataset = setup_dataset(cfg.dict[name])[0]
+    # display = DisplayDataset(dataset)
+    rgb, intrinsics, filepath,filename = DisplayDataset.infer(dataset,add_idx,infe_camera)
+    # pdb.set_trace()
+    savepath = filepath.split("image_")[0]
+    ## original画像をNumPy配列に変換して表示
+    rgb_disp = rgb.squeeze().cpu().detach().numpy()
+    rgb_disp = np.transpose(rgb_disp, (1, 2, 0))
+    rgb_disp = cv2.cvtColor((rgb_disp*255).astype(np.uint8),cv2.COLOR_RGB2BGR)
 
+    ## Infer from rgb and intrinsics
+    zerodepth_model = torch.hub.load("TRI-ML/vidar", "ZeroDepth", pretrained=True, trust_repo=True)
+    
+    # rgbサイズを384*640に変換し、それに合わせてintrinsicsも変換する関数
+    def resize_rgb_intrinsics(rgb, intrinsics):
+        #rgbの幅と高さを取得
+        rgb_h, rgb_w = rgb.shape[2], rgb.shape[3]
+        #rgbを[1,3,height,width]の形状から[1,3,384,640]の形状に変換
+        resized_tensor = torch.nn.functional.interpolate(rgb, size=(384, 640), mode='bilinear', align_corners=False)
+        # print(rgb.shape)
+        intrinsics2 = intrinsics.clone()
+        fx_new = intrinsics[0,0,0].item()*640/rgb_w
+        cx_new = intrinsics[0,0,2].item()*640/rgb_w
+        fy_new = intrinsics[0,1,1].item()*384/rgb_h
+        cy_new = intrinsics[0,1,2].item()*384/rgb_h
+        intrinsics2[0,0,0] = fx_new
+        intrinsics2[0,0,2] = cx_new
+        intrinsics2[0,1,1] = fy_new
+        intrinsics2[0,1,2] = cy_new
+        # print("intrinsics2:", intrinsics2)
+        # print("intrinsics:", intrinsics)
+        return resized_tensor, intrinsics2
 
-## Infer from rgb and intrinsics
-zerodepth_model = torch.hub.load("TRI-ML/vidar", "ZeroDepth", pretrained=True, trust_repo=True)
-# pdb.set_trace()
+    rgb2, intrinsics2 = resize_rgb_intrinsics(rgb, intrinsics)
+    depth_pred = zerodepth_model(rgb2, intrinsics2)
+    # print(depth_pred)
+    # 正解Depthを読み込んで誤差比較
 
-# rgbサイズを384*640に変換し、それに合わせてintrinsicsも変換する関数
-def resize_rgb_intrinsics(rgb, intrinsics):
-    #rgbの幅と高さを取得
-    rgb_h, rgb_w = rgb.shape[2], rgb.shape[3]
-    #rgbを[1,3,height,width]の形状から[1,3,384,640]の形状に変換
-    resized_tensor = torch.nn.functional.interpolate(rgb, size=(384, 640), mode='bilinear', align_corners=False)
-    # print(rgb.shape)
-    intrinsics2 = intrinsics.clone()
-    fx_new = intrinsics[0,0,0].item()*640/rgb_w
-    cx_new = intrinsics[0,0,2].item()*640/rgb_w
-    fy_new = intrinsics[0,1,1].item()*384/rgb_h
-    cy_new = intrinsics[0,1,2].item()*384/rgb_h
-    intrinsics2[0,0,0] = fx_new
-    intrinsics2[0,0,2] = cx_new
-    intrinsics2[0,1,1] = fy_new
-    intrinsics2[0,1,2] = cy_new
-    # print("intrinsics2:", intrinsics2)
-    # print("intrinsics:", intrinsics)
-    return resized_tensor, intrinsics2
+    ## depth_predをNumPy配列に変換して勾配情報を切り離して、CPUに送って、次元削減
+    depth_pred_np = depth_pred.squeeze().cpu().detach().numpy()
 
-rgb2, intrinsics2 = resize_rgb_intrinsics(rgb, intrinsics)
-depth_pred = zerodepth_model(rgb2, intrinsics2)
-print(depth_pred)
-# 正解Depthを読み込んで誤差比較
+    ## depth_pred_npの最大値と最小値を取得
+    depth_pred_max = np.max(depth_pred_np)
+    depth_pred_min = np.min(depth_pred_np)
 
-## depth_predをNumPy配列に変換して勾配情報を切り離して、CPUに送って、次元削減
-depth_pred_np = depth_pred.squeeze().cpu().detach().numpy()
+    ## depthをRGB画像に変換する関数
+    def depth_to_rgb(depth_data, depth_min, depth_max):
+        # depthを最大値と最小値でクリップ（範囲内に収める）
+        clipped_depth = np.clip(depth_data, depth_min, depth_max)
+        # 深度を0から1の範囲にスケーリング
+        normalized_depth = (clipped_depth - depth_min) / (depth_max - depth_min)
+        # 0から255の範囲にスケーリング
+        depth_scaled = (normalized_depth * 255).astype(np.uint8)
+        # カラーマップを適用してRGB画像に変換
+        depth_rgb = cv2.applyColorMap(depth_scaled, cv2.COLORMAP_JET)
+        return depth_rgb
 
-## depth_pred_npの最大値と最小値を取得
-depth_pred_max = np.max(depth_pred_np)
-depth_pred_min = np.min(depth_pred_np)
+    # viz_depthを使ってdepthを可視化
+    depth_rgb_image_vizdepth = viz_depth(depth_pred) 
+    
+    ## フォルダを作成
+    if not os.path.exists(f"{savepath}inf_result"):
+        os.mkdir(f"{savepath}inf_result")
+    os.chmod(f"{savepath}inf_result", 0o777)
 
-## depthをRGB画像に変換する関数
-def depth_to_rgb(depth_data, depth_min, depth_max):
-    # depthを最大値と最小値でクリップ（範囲内に収める）
-    clipped_depth = np.clip(depth_data, depth_min, depth_max)
-    # 深度を0から1の範囲にスケーリング
-    normalized_depth = (clipped_depth - depth_min) / (depth_max - depth_min)
-    # 0から255の範囲にスケーリング
-    depth_scaled = (normalized_depth * 255).astype(np.uint8)
-    # カラーマップを適用してRGB画像に変換
-    depth_rgb = cv2.applyColorMap(depth_scaled, cv2.COLORMAP_JET)
-    return depth_rgb
-
-# viz_depthを使ってdepthを可視化
-depth_rgb_image_vizdepth = viz_depth(depth_pred) 
-print(depth_rgb_image_vizdepth.shape)
-
-#データ名を返す
-
-## depthをRGBに変換
-depth_rgb_image = depth_to_rgb(depth_pred_np, depth_pred_min, depth_pred_max)
-## input（RGB）を保存
-cv2.imwrite(f"Infe_data/{name}/rgb_input{infe_camera}_{filename}.png", rgb_disp)
-## output（モノクロ）を保存
-# cv2.imwrite("depth{infe_camera}_{add_idx}.png", depth_pred_np)
-## RGBoutputを保存
-# cv2.imwrite(f"Infe_data/{name}/depth_color{infe_camera}_{add_idx}.png", depth_rgb_image)
-#RGBoutput2を保存
-write_image(f"Infe_data/{name}/depth_c_inv{infe_camera}_{filename}.png", depth_rgb_image_vizdepth)
+    ## depthをRGBに変換
+    depth_rgb_image = depth_to_rgb(depth_pred_np, depth_pred_min, depth_pred_max)
+    ## input（RGB）を保存
+    cv2.imwrite(f"{savepath}inf_result/rgb_input{infe_camera}_{filename}.png", rgb_disp)
+    ## output（モノクロ）を保存
+    # cv2.imwrite("depth{infe_camera}_{add_idx}.png", depth_pred_np)
+    ## RGBoutputを保存
+    # cv2.imwrite(f"Infe_data/{name}/depth_color{infe_camera}_{add_idx}.png", depth_rgb_image)
+    #RGBoutput2を保存
+    write_image(f"{savepath}inf_result/depth_c_inv{infe_camera}_{filename}.png", depth_rgb_image_vizdepth)
 print("最後まできたよ")
