@@ -92,6 +92,7 @@ class DrivingStereoDataset(BaseDataset):
             add_flag = True
             if add_flag and self.with_depth:
                 # Check if depth file exists
+                
                 depth = self._get_depth_file(path, self.depth_type)
                 add_flag = depth is not None and os.path.exists(depth)
             if add_flag:
@@ -144,6 +145,7 @@ class DrivingStereoDataset(BaseDataset):
     @staticmethod
     def _get_intrinsics(image_file, calib_data):
         """Get intrinsics from the calib_data dictionary."""
+        # pdb.set_trace()
         for cam in ['left', 'right']:
             # Check for both cameras, if found replace and return intrinsics
             if IMAGE_FOLDER[cam] in image_file:
@@ -173,6 +175,7 @@ class DrivingStereoDataset(BaseDataset):
 
     def get_filename(self, sample_idx):
         """Returns the filename for an index."""
+        
         filename = os.path.splitext(self.paths[sample_idx].replace(self.path + '/', ''))[0]
         for cam in ['left', 'right']:
             filename = filename.replace('{}/data'.format(IMAGE_FOLDER[cam]),
@@ -298,7 +301,6 @@ class DrivingStereoDataset(BaseDataset):
 
     def _get_pose(self, image_file, camera):
         """Gets the pose information from an image file."""
-        # pdb.set_trace()
         if image_file in self.pose_cache:
             return self.pose_cache[image_file]
         # Find origin frame in this sequence to determine scale & origin translation

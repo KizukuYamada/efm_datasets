@@ -10,6 +10,7 @@ from efm_datasets.dataloaders.utils.transforms import no_transform
 from efm_datasets.utils.config import load_class, cfg_has, cfg_add_to_dict, get_from_cfg_list, merge_dict, to_namespace
 from efm_datasets.utils.data import flatten, keys_in
 from efm_datasets.utils.types import is_namespace
+import pdb
 
 
 def setup_dataset(cfg, root='efm_datasets/dataloaders'):
@@ -32,10 +33,11 @@ def setup_dataset(cfg, root='efm_datasets/dataloaders'):
         name = get_from_cfg_list(cfg, 'name', i)
         repeat = get_from_cfg_list(cfg, 'repeat', i)
         dataset = load_class(name + 'Dataset', root)(**args)
+        # pdb.set_trace()
         if cfg_has(cfg, 'repeat') and repeat > 1:
             dataset = ConcatDataset([dataset for _ in range(repeat)])
         datasets.append(dataset)
-
+    
     return datasets
 
 

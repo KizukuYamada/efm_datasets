@@ -18,15 +18,22 @@ name = sys.argv[2]
 cfg = read_config(config)
 
 ## 設定を上書き
-time_range = [-1,1]
-add_idx = 1 #range内のどこのデータを表示するか指定します。
+time_range = [-5,5]
+add_idx = 5 #range内のどこのデータを表示するか指定します。
+if time_range[0] <= add_idx <= time_range[1]:
+    # add_idx is within the time_range, so keep its value
+    pass  # This pass statement is optional and just keeps the structure clear
+else:
+    # add_idx is outside the time_range, so reset its value to 0
+    add_idx = 0
+infe_camera = 0 #どのカメラのデータを表示するか指定します。0なら左、1なら右です。
 current_object = getattr(cfg, name)# getattr関数を使って、現在のオブジェクトを取得します。
 setattr(current_object, 'context', time_range)# 時間的にどこからどこまでのデータを使うかを指定します。[-1,1]なら、現在のフレームと前後1フレームのデータを使います。
 
 dataset = setup_dataset(cfg.dict[name])[0]
 # display = DisplayDataset(dataset)
-rgb, intrinsics = DisplayDataset.infer(dataset)
-
+rgb, intrinsics, filename = DisplayDataset.infer(dataset,add_idx,infe_camera)
+pdb.set_trace()
 ## フォルダを作成
 if not os.path.exists(f"Infe_data/{name}"):
     os.mkdir(f"Infe_data/{name}")
@@ -39,7 +46,7 @@ rgb_disp = rgb.squeeze().cpu().detach().numpy()
 rgb_disp = np.transpose(rgb_disp, (1, 2, 0))
 rgb_disp = cv2.cvtColor((rgb_disp*255).astype(np.uint8),cv2.COLOR_RGB2BGR)
 # print(rgb_disp)
-cv2.imwrite(f"Infe_data/{name}/rgb_input.png", rgb_disp)
+
 
 ## Infer from rgb and intrinsics
 zerodepth_model = torch.hub.load("TRI-ML/vidar", "ZeroDepth", pretrained=True, trust_repo=True)
@@ -51,7 +58,7 @@ def resize_rgb_intrinsics(rgb, intrinsics):
     rgb_h, rgb_w = rgb.shape[2], rgb.shape[3]
     #rgbを[1,3,height,width]の形状から[1,3,384,640]の形状に変換
     resized_tensor = torch.nn.functional.interpolate(rgb, size=(384, 640), mode='bilinear', align_corners=False)
-    print(rgb.shape)
+    # print(rgb.shape)
     intrinsics2 = intrinsics.clone()
     fx_new = intrinsics[0,0,0].item()*640/rgb_w
     cx_new = intrinsics[0,0,2].item()*640/rgb_w
@@ -61,13 +68,14 @@ def resize_rgb_intrinsics(rgb, intrinsics):
     intrinsics2[0,0,2] = cx_new
     intrinsics2[0,1,1] = fy_new
     intrinsics2[0,1,2] = cy_new
-    print("intrinsics2:", intrinsics2)
-    print("intrinsics:", intrinsics)
+    # print("intrinsics2:", intrinsics2)
+    # print("intrinsics:", intrinsics)
     return resized_tensor, intrinsics2
 
 rgb2, intrinsics2 = resize_rgb_intrinsics(rgb, intrinsics)
 depth_pred = zerodepth_model(rgb2, intrinsics2)
 print(depth_pred)
+# 正解Depthを読み込んで誤差比較
 
 ## depth_predをNumPy配列に変換して勾配情報を切り離して、CPUに送って、次元削減
 depth_pred_np = depth_pred.squeeze().cpu().detach().numpy()
@@ -90,15 +98,18 @@ def depth_to_rgb(depth_data, depth_min, depth_max):
 
 # viz_depthを使ってdepthを可視化
 depth_rgb_image_vizdepth = viz_depth(depth_pred) 
-print(depth_rgb_image_vizdepth.shape)   
+print(depth_rgb_image_vizdepth.shape)
+
+#データ名を返す
 
 ## depthをRGBに変換
 depth_rgb_image = depth_to_rgb(depth_pred_np, depth_pred_min, depth_pred_max)
-
+## input（RGB）を保存
+cv2.imwrite(f"Infe_data/{name}/rgb_input{infe_camera}_{filename}.png", rgb_disp)
 ## output（モノクロ）を保存
-# cv2.imwrite("depth.png", depth_pred_np)
+# cv2.imwrite("depth{infe_camera}_{add_idx}.png", depth_pred_np)
 ## RGBoutputを保存
-cv2.imwrite(f"Infe_data/{name}/depth_color.png", depth_rgb_image)
+# cv2.imwrite(f"Infe_data/{name}/depth_color{infe_camera}_{add_idx}.png", depth_rgb_image)
 #RGBoutput2を保存
-write_image(f"Infe_data/{name}/depth_c_inv.png", depth_rgb_image_vizdepth)
+write_image(f"Infe_data/{name}/depth_c_inv{infe_camera}_{filename}.png", depth_rgb_image_vizdepth)
 print("最後まできたよ")

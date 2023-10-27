@@ -205,22 +205,27 @@ class DisplayDataset:
             self.draw.update(30)
     
     @staticmethod   
-    def infer(dataset):
+    def infer(dataset,add_idx=0,infe_camera=0):
         
         idx = 0
-        tgt = (0, 0)
-        dataset = dataset
+        # tgt = (0, 0)
+        # dataset = dataset
 
-        tasks = ['rgb', 'depth']
-        cam_colors = ['red', 'blu', 'gre', 'yel', 'mag', 'cya'] * 100
-        offset = [None, None, None, None, -1, 1]
+        # tasks = ['rgb', 'depth']
+        # cam_colors = ['red', 'blu', 'gre', 'yel', 'mag', 'cya'] * 100
+        # offset = [None, None, None, None, -1, 1]
         
         data = dataset[idx]
-
         data = make_batch(data)
         data = fold_batch(data)
-
-        rgb = data['rgb'][(2, 1)]#(時間差,カメラ)
-        intrinsics = get_from_dict(data, 'intrinsics')[(2, 1)]
-
-        return rgb, intrinsics
+        
+        rgb = data['rgb'][(add_idx, infe_camera)]#(時間差,カメラ)
+        intrinsics = get_from_dict(data, 'intrinsics')[(add_idx, infe_camera)]
+        #ファイルネームの取得（数字だけ）
+        filepath = data["filename"][((add_idx, infe_camera))]
+        # pdb.set_trace()
+        filename = filepath.split("/")[-1]
+        #数字部分のみ抽出して数値に変換
+        filename = filename.split(".")[0]
+        # filename = dataset._get_filename(add_idx)
+        return rgb, intrinsics, filename
