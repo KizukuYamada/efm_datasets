@@ -221,11 +221,14 @@ class DisplayDataset:
         
         rgb = data['rgb'][(add_idx, infe_camera)]#(時間差,カメラ)
         intrinsics = get_from_dict(data, 'intrinsics')[(add_idx, infe_camera)]
-        #ファイルネームの取得（数字だけ）
+        #depthを取得
+        depth_origin = get_from_dict(data, 'depth')[(add_idx, infe_camera)]
+        # pdb.set_trace()
+        # #ファイルネームの取得（数字だけ）
         filepath = data["filename"][((add_idx, infe_camera))]
         # pdb.set_trace()
         filename = filepath.split("/")[-1]
         #数字部分のみ抽出して数値に変換
         filename = filename.split(".")[0]
         # filename = dataset._get_filename(add_idx)
-        return rgb, intrinsics, filepath, filename
+        return rgb, intrinsics, filepath, filename, depth_origin

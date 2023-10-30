@@ -11,6 +11,7 @@ from efm_datasets.utils.write import write_image
 from scripts.display.DisplayDataset import DisplayDataset
 import sys
 import os
+import torch.nn.functional as F
 
 config = sys.argv[1]
 print(config)
@@ -19,8 +20,8 @@ cfg = read_config(config)
 
 ## 設定を上書き
 time_range = [-3,3]
-infe_camera = 1 #どのカメラのデータを表示するか指定します。0なら左、1なら右です。
-infe_range = [-1,1]
+infe_camera = 0 #どのカメラのデータを表示するか指定します。0なら左、1なら右です。
+infe_range = [0,0]
 # 解析範囲がtime_rangeを超えていたら、time_rangeに合わせる
 if time_range[0] <= infe_range[0]:
     pass
@@ -38,8 +39,10 @@ for i in range(infe_range[0],infe_range[1]+1):
 
     dataset = setup_dataset(cfg.dict[name])[0]
     # display = DisplayDataset(dataset)
-    rgb, intrinsics, filepath,filename = DisplayDataset.infer(dataset,add_idx,infe_camera)
+    rgb, intrinsics, filepath, filename, depth_origin = DisplayDataset.infer(dataset,add_idx,infe_camera)
     # pdb.set_trace()
+    # # depthを取得
+    # depth = dataset.get_depth(add_idx, infe_camera)
     savepath = filepath.split("image_")[0]
     ## original画像をNumPy配列に変換して表示
     rgb_disp = rgb.squeeze().cpu().detach().numpy()
@@ -54,61 +57,67 @@ for i in range(infe_range[0],infe_range[1]+1):
         #rgbの幅と高さを取得
         rgb_h, rgb_w = rgb.shape[2], rgb.shape[3]
         #rgbを[1,3,height,width]の形状から[1,3,384,640]の形状に変換
-        resized_tensor = torch.nn.functional.interpolate(rgb, size=(384, 640), mode='bilinear', align_corners=False)
+        resized_rgb = rgb.clone()
+        resized_rgb = F.interpolate(rgb, size=(384, 640), mode='bilinear', align_corners=False)
         # print(rgb.shape)
-        intrinsics2 = intrinsics.clone()
-        fx_new = intrinsics[0,0,0].item()*640/rgb_w
-        cx_new = intrinsics[0,0,2].item()*640/rgb_w
-        fy_new = intrinsics[0,1,1].item()*384/rgb_h
-        cy_new = intrinsics[0,1,2].item()*384/rgb_h
-        intrinsics2[0,0,0] = fx_new
-        intrinsics2[0,0,2] = cx_new
-        intrinsics2[0,1,1] = fy_new
-        intrinsics2[0,1,2] = cy_new
+        intrinsics2 = intrinsics.clone() 
+        intrinsics2[0,0,0] = intrinsics[0,0,0].item()*640/rgb_w
+        intrinsics2[0,0,2] = intrinsics[0,0,2].item()*640/rgb_w
+        intrinsics2[0,1,1] = intrinsics[0,1,1].item()*384/rgb_h
+        intrinsics2[0,1,2] = intrinsics[0,1,2].item()*384/rgb_h
         # print("intrinsics2:", intrinsics2)
         # print("intrinsics:", intrinsics)
-        return resized_tensor, intrinsics2
+        return resized_rgb, intrinsics2
 
     rgb2, intrinsics2 = resize_rgb_intrinsics(rgb, intrinsics)
-    depth_pred = zerodepth_model(rgb2, intrinsics2)
-    # print(depth_pred)
-    # 正解Depthを読み込んで誤差比較
+    depth_pred = zerodepth_model(rgb2, intrinsics2)#[1,3,384,640]
+    depth_pred = torch.nn.functional.interpolate(depth_pred, size=(rgb.shape[2], rgb.shape[3]), mode='bilinear', align_corners=False)#predをオリジナルサイズに変更
+    # depth_origin2 = torch.nn.functional.interpolate(depth_origin, size=(384, 640), mode='bilinear', align_corners=False)#[1,3,384,640]に変更
+    # print("depth_pred:",depth_pred.shape)
+    # print("depth_origin:",depth_origin.shape)
+    print("depth_pred:",depth_pred.shape)
+    print("depth_origin:",depth_origin.shape)
+    # pdb.set_trace()
+    # 正解Depthと予測Deothの誤差をhuber関数で比較
+    def masked_huber_loss(pred, target, threshold=0, delta=1.0):
+        mask = (target > threshold).float()
+        # huber lossを計算
+        loss = F.smooth_l1_loss(pred, target, reduction='none', beta=delta)
+        # 単純な値の引き算(絶対値)を計算
+        loss_abs = torch.abs(pred - target)
+        # マスク(正解点群のあるピクセルだけ誤差計算)を適用
+        masked_loss = loss * mask
+        masked_loss_abs = loss_abs * mask
+        return masked_loss, masked_loss_abs
 
-    ## depth_predをNumPy配列に変換して勾配情報を切り離して、CPUに送って、次元削減
+    loss, loss_abs = masked_huber_loss(depth_pred, depth_origin)
+    # pdb.set_trace()
+    print("loss:",loss)
+    print("loss_mean:",loss.mean().item())
+    print("loss_abs:",loss_abs)
+    print("loss_abs_mean:",loss_abs.mean().item())
+    
+    ## depthをNumPy配列に変換して勾配情報を切り離して、CPUに送って、次元削減
     depth_pred_np = depth_pred.squeeze().cpu().detach().numpy()
-
-    ## depth_pred_npの最大値と最小値を取得
-    depth_pred_max = np.max(depth_pred_np)
-    depth_pred_min = np.min(depth_pred_np)
-
-    ## depthをRGB画像に変換する関数
-    def depth_to_rgb(depth_data, depth_min, depth_max):
-        # depthを最大値と最小値でクリップ（範囲内に収める）
-        clipped_depth = np.clip(depth_data, depth_min, depth_max)
-        # 深度を0から1の範囲にスケーリング
-        normalized_depth = (clipped_depth - depth_min) / (depth_max - depth_min)
-        # 0から255の範囲にスケーリング
-        depth_scaled = (normalized_depth * 255).astype(np.uint8)
-        # カラーマップを適用してRGB画像に変換
-        depth_rgb = cv2.applyColorMap(depth_scaled, cv2.COLORMAP_JET)
-        return depth_rgb
+    depth_origin_np = depth_origin.squeeze().cpu().detach().numpy()
+    loss_np = loss.squeeze().cpu().detach().numpy()
 
     # viz_depthを使ってdepthを可視化
-    depth_rgb_image_vizdepth = viz_depth(depth_pred) 
+    depth_rgb_image_vizdepth = viz_depth(depth_pred, filter_zeros=True) 
+    depth_origin_image_vizdepth = viz_depth(depth_origin, filter_zeros=True) 
+    loss_image_vizdepth = viz_depth(loss, filter_zeros=True)
     
     ## フォルダを作成
     if not os.path.exists(f"{savepath}inf_result"):
         os.mkdir(f"{savepath}inf_result")
     os.chmod(f"{savepath}inf_result", 0o777)
 
-    ## depthをRGBに変換
-    depth_rgb_image = depth_to_rgb(depth_pred_np, depth_pred_min, depth_pred_max)
     ## input（RGB）を保存
     cv2.imwrite(f"{savepath}inf_result/rgb_input{infe_camera}_{filename}.png", rgb_disp)
-    ## output（モノクロ）を保存
+    ## depthのoutput（モノクロ）を保存
     # cv2.imwrite("depth{infe_camera}_{add_idx}.png", depth_pred_np)
-    ## RGBoutputを保存
-    # cv2.imwrite(f"Infe_data/{name}/depth_color{infe_camera}_{add_idx}.png", depth_rgb_image)
-    #RGBoutput2を保存
+    # depthのoutput（カラー、TRIバージョン）を保存
     write_image(f"{savepath}inf_result/depth_c_inv{infe_camera}_{filename}.png", depth_rgb_image_vizdepth)
+    write_image(f"{savepath}inf_result/depth_true_inv{infe_camera}_{filename}.png", depth_origin_image_vizdepth)
+    write_image(f"{savepath}inf_result/loss_{infe_camera}_{filename}.png", loss_image_vizdepth)
 print("最後まできたよ")
