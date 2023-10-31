@@ -68,7 +68,8 @@ RUN apt-get install -y \
     mesa-utils \
     freeglut3-dev \
     libsdl2-2.0-0 \
-    python-pygame
+    python-pygame \
+    python3-tk
 
 RUN pip install git+https://github.com/princeton-vl/lietorch.git
 
