@@ -1,0 +1,3 @@
+[submodule "YOLOv8"]
+	path = YOLOv8
+	url = git@github.com:KizukuYamada/YOLOv8.git
