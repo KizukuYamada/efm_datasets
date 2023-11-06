@@ -7,12 +7,13 @@ from efm_datasets.utils.write import write_image
 import pdb
 
 zerodepth_model = torch.hub.load("TRI-ML/vidar", "ZeroDepth", pretrained=True, trust_repo=True)
-intrinsics_file = 'examples/DrivingStereo/2018-10-31-06-55-01.txt'
-img_file = 'examples/DrivingStereo/2018-10-31-06-55-01_2018-10-31-06-55-02-084.jpg'
-# intrinsics = torch.tensor(np.load('examples/ddad_intrinsics.npy')).unsqueeze(0)
+# intrinsics_file = 'examples/DrivingStereo/2018-10-31-06-55-01.txt'
+# img_file = 'examples/DrivingStereo/2018-10-31-06-55-01_2018-10-31-06-55-02-084.jpg'
+img_file = 'examples/tire.jpeg'
+intrinsics = torch.tensor(np.load('examples/ddad_intrinsics.npy')).unsqueeze(0)
 # pdb.set_trace()
 # intrinsics = torch.tensor(np.load('/home/kizukuyamada/Downloads/DrivingStereo_raw/train/calib/half-image-calib/2018-10-31-06-55-01.txt')).unsqueeze(0)#ここdockerから参照できないからmntに移す
-intrinsics = torch.tensor(np.load('examples/DrivingStereo/2018-10-31-06-55-01.txt')).unsqueeze(0)
+# intrinsics = torch.tensor(np.load('examples/DrivingStereo/2018-10-31-06-55-01.txt')).unsqueeze(0)
 # rgb = torch.tensor(cv2.imread('examples/ddad_sample.png')).permute(2,0,1).unsqueeze(0)/255.
 # rgb = torch.tensor(cv2.imread('/home/kizukuyamada/Downloads/DrivingStereo_emaple/weather/cloudy/half/left_image/left-image-half-size/cloudy/left-image-half-size/2018-10-31-06-55-01_2018-10-31-06-55-02-084.jpg')).permute(2,0,1).unsqueeze(0)/255.
 rgb = torch.tensor(cv2.imread(img_file)).permute(2,0,1).unsqueeze(0)/255.
