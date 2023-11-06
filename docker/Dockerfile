@@ -64,7 +64,7 @@ RUN pip install \
     pygame==2.0.1 \
     PyOpenGL==3.1.5 \
     PyOpenGL-accelerate==3.1.5
-RUN apt-get install -y \
+RUN apt-get update && apt-get install -y \
     mesa-utils \
     freeglut3-dev \
     libsdl2-2.0-0 \

@@ -12,9 +12,7 @@ from scripts.display.DisplayDataset import DisplayDataset
 import sys
 import os
 import torch.nn.functional as F
-import matplotlib
-matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
+
 
 config = sys.argv[1]
 name = sys.argv[2]
