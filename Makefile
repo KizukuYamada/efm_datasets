@@ -46,7 +46,7 @@ clean:
 
 docker-build:
 	docker build \
-		-f docker/Dockerfile_vidar_zero \
+		-f docker/Dockerfile_vidar_zero_old\
 		-t ${DOCKER_IMAGE} .
 
 docker-interactive: docker-build
