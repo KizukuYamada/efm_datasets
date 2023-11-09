@@ -13,7 +13,7 @@ DrivingStereo:
     name: [DrivingStereo]
     path: [/data/datasets/DrivingStereo_tiny]
     split: [driving_stereo_tiny.txt]
-    context: [-2,2]
+    context: [-1,1]
     cameras: [[0,1]]
     labels: [intrinsics,depth]
     labels_context: [intrinsics,depth]
