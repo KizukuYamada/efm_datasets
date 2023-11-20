@@ -4,6 +4,9 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt    
 import pdb
 import math
+import cv2 
+from efm_datasets.utils.viz import viz_depth,viz_inv_depth
+import torch
     
 def plot_distribution(depth_origin_np, depth_pred_np, loss_np,loss_abs_np, savepath, infe_camera, filename):
 
@@ -45,8 +48,9 @@ def plot_distribution(depth_origin_np, depth_pred_np, loss_np,loss_abs_np, savep
     
 def compare_distribution(masked_true_depth, masked_depth, savepath, infe_camera, filename):
     #データをnpのint型で1次元に変換
-    masked_true_depth_np = masked_true_depth.cpu().detach().numpy()
-    masked_pred_depth_np = masked_depth.cpu().detach().numpy()
+    if torch.is_tensor(masked_true_depth):
+        masked_true_depth_np = masked_true_depth.cpu().detach().numpy()
+        masked_pred_depth_np = masked_depth.cpu().detach().numpy()
     
     #9:16表示に最適な最適なサブプロット行列を見つける
     # pdb.set_trace()
@@ -143,3 +147,84 @@ def find_closest_ratio(a):
                 best_x, best_y = x, y
 
     return best_x, best_y
+
+def mask_disp(masked_depth,masked_true_depth):
+    for l in range(masked_depth.size(0)):
+            masked_depth_np = viz_depth(masked_depth[l], filter_zeros=True) 
+            masked_true_depth_np = viz_depth(masked_true_depth[l], filter_zeros=True) 
+            cv2.imshow(f'Depth_True Map{l}', masked_true_depth_np)
+            cv2.imshow(f'Depth Map{l}', masked_depth_np)
+            # key = cv2.waitKey(0)
+    return
+            
+            
+def plot_time():
+    return
+            
+def compare_true_pred(ave_obj_true_depth, ave_obj_depth, savepath, infe_camera, filename):
+    axes = plt.subplots(1, 3, figsize=(12, 4))
+    # GPU上にあるテンソルの場合、まずCPUに移動させる
+    if torch.is_tensor(ave_obj_true_depth):
+        ave_obj_true_depth = ave_obj_true_depth.cpu().detach().numpy()
+        # if ave_obj_depth.is_cuda:
+        ave_obj_depth = ave_obj_depth.cpu().detach().numpy()
+    #桁数を丸める
+    ave_obj_true_depth_np = np.round(ave_obj_true_depth,1)
+    ave_obj_depth_np = np.round(ave_obj_depth,1)
+    #距離の小さい順にソート？必要？
+    # データサイズ分の配列を作成
+    x = np.arange(ave_obj_true_depth_np.shape[0])
+    # 誤差[m]を計算
+    perd_loss = ave_obj_true_depth_np - ave_obj_depth_np
+    # 平均絶対誤差[m]を計算
+    average_perd_loss = np.mean(abs(perd_loss))
+    # 絶対差分[%]を計算
+    diff_percent = np.abs(perd_loss / ave_obj_true_depth_np * 100)
+    # 平均絶対差分[%]を計算
+    average_diff_percent = np.mean(diff_percent)
+    # pdb.set_trace()c
+    labels = ['True', 'Pred']
+    plt.subplot(1, 3, 1)
+    plt.scatter(x,ave_obj_true_depth_np,label="True")
+    plt.scatter(x,ave_obj_depth_np,label="Pred")
+    # plt.xticks(range(min(x), max(x)+1, 1))
+    plt.title('Object Distance')
+    plt.xlabel('Object[]')
+    plt.ylabel('Distance[m]')
+    plt.legend()
+
+    # 2つ目のグラフ
+    plt.subplot(1, 3, 2)
+    plt.scatter(ave_obj_true_depth_np,perd_loss,c="purple")
+    plt.xlim(0, int(max(ave_obj_true_depth_np))+5)
+    plt.title('True-Pred Loss')
+    plt.xlabel('True Distance[m]')
+    plt.ylabel('True-Pred Loss[m]')
+    plt.axhline(y=average_perd_loss, color='r', linestyle='--', label=f'Average Loss:{average_perd_loss:.1f}[m]')
+    plt.legend()
+    
+    plt.subplot(1, 3, 3)
+    plt.scatter(ave_obj_true_depth_np,diff_percent,c="purple")
+    plt.xlim(0, int(max(ave_obj_true_depth_np))+5)
+    plt.title('(True-Pred)/True Loss[%]')
+    plt.xlabel('True Distance[m]')
+    plt.ylabel('(True-Pred)/True Loss[%]')
+    # plt.legend()
+    # 平均差分[%]の線を追加
+    plt.axhline(y=average_diff_percent, color='r', linestyle='--', label=f'Average Loss:{average_diff_percent:.1f}[%]')
+    plt.legend()
+    # plt.scatter(x,ave_obj_true_depth_np, c="yellow", marker="*", alpha=0.5,
+    #         linewidths="2", edgecolors="orange")
+    # plt.scatter(x,ave_obj_depth_np, c="blue", marker="*", alpha=0.5,
+    #         linewidths="2", edgecolors="orange")
+    # plt.title('Depth Data Distribution')
+    # plt.xlabel('Distance[m]')
+    # plt.ylabel('Frequency')
+    # plt.legend()
+
+    # グラフを表示
+    plt.tight_layout()  # グラフ間のスペースを調整
+    plt.savefig(f"{savepath}inf_result/Compare_TP_{infe_camera}_{filename}.png")
+    # plt.show()
+    
+    return

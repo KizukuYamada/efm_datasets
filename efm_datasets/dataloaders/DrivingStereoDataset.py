@@ -110,6 +110,7 @@ class DrivingStereoDataset(BaseDataset):
                     
                     if backward_context_idxs is not None and forward_context_idxs is not None:
                         exists = True
+                        # pdb.set_trace()
                         if self.with_depth_context:
                             _, depth_context_files = self._get_context_files(
                                 self.paths[idx], backward_context_idxs + forward_context_idxs)
@@ -172,7 +173,8 @@ class DrivingStereoDataset(BaseDataset):
         keypoints_coord[:, 0] *= size[0] / 320
         keypoints_coord[:, 1] *= size[1] / 240
         return keypoints_coord, keypoints_desc
-
+    
+    @staticmethod
     def get_filename(self, sample_idx):
         """Returns the filename for an index."""
         

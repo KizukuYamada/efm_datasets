@@ -124,3 +124,30 @@ def stack_datasets(datasets):
                 datasets.pop(key)
 
     return stacked_datasets
+
+def setup_one_dataset(cfg,k, root='efm_datasets/dataloaders'):
+    """Create a dataset from configuration"""
+
+    shared_keys = ['context', 'labels', 'labels_context']
+
+    num_datasets = 0
+    for key, val in cfg.__dict__.items():
+        if key not in shared_keys and not is_namespace(val):
+            num_datasets = max(num_datasets, len(val))
+    pdb.set_trace()
+    datasets = []
+    for i in range(num_datasets):
+        args = {}
+        for key, val in cfg.__dict__.items():
+            if not is_namespace(val):
+                cfg_add_to_dict(args, cfg, key, i if key not in shared_keys else None)
+        args['data_transform'] = no_transform
+        name = get_from_cfg_list(cfg, 'name', i)
+        repeat = get_from_cfg_list(cfg, 'repeat', i)
+        dataset = load_class(name + 'Dataset', root)(**args)
+        # pdb.set_trace()
+        if cfg_has(cfg, 'repeat') and repeat > 1:
+            dataset = ConcatDataset([dataset for _ in range(repeat)])
+        datasets.append(dataset)
+    
+    return datasets
