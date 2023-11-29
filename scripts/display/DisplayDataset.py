@@ -216,6 +216,7 @@ class DisplayDataset:
         # offset = [None, None, None, None, -1, 1]
         # pdb.set_trace()
         data = dataset[idx]
+        # pdb.set_trace()
         data = make_batch(data)
         data = fold_batch(data)
         

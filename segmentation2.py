@@ -17,45 +17,28 @@ from graph import mask_disp, compare_distribution, compare_true_pred, plot_distr
 from functions import remove_outliers
 import datetime
 import subprocess
-import intrinsics_change
-import functions
 
-data_type = "VIDEO" #VIDEO,dataset,IMAGE
+data_type = "dataset" #VIDEO,dataset,IMAGE
 img_file = 'YOLOv8/examples/bus.jpg'
 img_file = 'mask/masked_images/rgb_input99_20210916_084834000_iOS_short_UUmask.png'
 #VIDEOに対する前設定
-# video_path = "/data/datasets/Platooning/20210916_084834000_iOS_short.mp4"
-# video_path = "/data/datasets/Platooning/20210916_084834000_iOS.mov"
+video_path = "/data/datasets/Platooning/20210916_084834000_iOS_short.mp4"
+video_path = "/data/datasets/Platooning/20210916_084834000_iOS.mov"
 video_path = "/data/datasets/Platooning/20231030/20231030/nobori/20231030_065630000_iOS.MOV"
-# cam_para = [[1.20866229e+03,0.00000000e+00,6.33281682e+02],
-#             [0.00000000e+00,1.20860740e+03,3.63294680e+02], 
-#             [0.00000000e+00,0.00000000e+00,1.00000000e+00]]
-# cam_para = [[1.20866229e+03,0.00000000e+00,3.63294680e+02],
-#             [0.00000000e+00,1.20860740e+03,6.33281682e+02], 
-#             [0.00000000e+00,0.00000000e+00,1.00000000e+00]]
-cam_para = [[3.2704918e+03,0.00000000e+00,9.60000000e+02],
-            [0.00000000e+00,3.2704918e+03,5.40000000e+02],
+cam_para = [[1.20866229e+03,0.00000000e+00,6.33281682e+02],
+            [0.00000000e+00,1.20860740e+03,3.63294680e+02], 
             [0.00000000e+00,0.00000000e+00,1.00000000e+00]]
-cam_para = [[1.812993435e+03,0.00000000e+00,9.49922523e+02],
-            [0.00000000e+00,1.8129111e+03,5.44942020e+02],
-            [0.00000000e+00,0.00000000e+00,1.00000000e+00]]
-cam_para = [[1.78465433e+03,0.00000000e+00,9.45307483e+02],#左向き
-            [0.00000000e+00,1.78589379e+03,5.41801956e+02],
-            [0.00000000e+00,0.00000000e+00,1.00000000e+00]]
-# cam_para = [[1.78977024e+03,0.00000000e+00,9.68191872e+02],#右向き
-#             [0.00000000e+00,1.78997525e+03,5.27507713e+02],
+# cam_para = [[3.2704918e+03,0.00000000e+00,6.33281682e+02],
+#             [0.00000000e+00,3.2704918e+03,3.63294680e+02], 
 #             [0.00000000e+00,0.00000000e+00,1.00000000e+00]]
-# cam_para = [[3.2704918e+03,0.00000000e+00,3.63294680e+02],
-#             [0.00000000e+00,3.2704918e+03,6.33281682e+02],
-#             [0.00000000e+00,0.00000000e+00,1.00000000e+00]]
-
 #空箱の定義
 ave_obj_true_depth_all = []
 ave_obj_depth_all = []
 
 #YOLOの設定
-seg_model = YOLO('yolov8x-seg.pt')#n,s,m,lx
-YOLO_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+seg_model = YOLO('yolov8n-seg.pt')
+# YOLO_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+YOLO_device = torch.device("cpu")
 seg_model.to(YOLO_device)
 YOLO_conf = 0.20
 
@@ -74,11 +57,14 @@ if data_type == "dataset":
     cfg.dict[name].context[0]=0
     cfg.dict[name].context[1]=data_max-1
     # cfg.dict[name].context[1]=6
+    print(cfg.dict[name])
 
     ## Override settings
     infe_camera = 0 #どのカメラのデータを表示するか指定します。0なら左、1なら右です。
-    infe_range = [0,10]
+    infe_range = [0,4]
+    # infe_range = [460,463]
     step = 1
+    # pdb.set_trace()
     fourcc = cv2.VideoWriter.fourcc(*'mp4v')
     dataset = setup_dataset(cfg.dict[name])[0]
     data = dataset[0]
@@ -111,75 +97,50 @@ if data_type == "dataset":
         width = 879
         height = 400
     # pdb.set_trace()
-    savefinalpath = f"{savepath}inf_result/cam{infe_camera}_{st_data}_{end_data}_Y{YOLO_conf}"
-        ## フォルダを作成
-    if not os.path.exists(f"{savepath}inf_result"):
-        os.mkdir(f"{savepath}inf_result")
-    os.chmod(f"{savepath}inf_result", 0o777)
-    if not os.path.exists(f"{savefinalpath}"):
-        os.mkdir(f"{savefinalpath}")
-    os.chmod(f"{savefinalpath}", 0o777)
-    out = cv2.VideoWriter(f"{savefinalpath}/output_video2.mp4", fourcc, fps/step, (width, height))
-    out2 = cv2.VideoWriter(f"{savefinalpath}/depth.mp4", fourcc, fps/step, (width, height))
+    videooutpath = f"{savepath}inf_result/hoge/{name}_{infe_camera}_{st_data}_{end_data}_Y{YOLO_conf}.mp4"
+    out = cv2.VideoWriter(videooutpath, fourcc, fps/step, (width, height))
+    out2 = cv2.VideoWriter(f"{savepath}inf_result/hoge/depth_{name}_{infe_camera}_{st_data}_{end_data}_Y{YOLO_conf}.mp4", fourcc, fps/step, (width, height))
 elif data_type == "VIDEO":
     cap = cv2.VideoCapture(video_path)
+    # pdb.set_trace()
     fm_max =int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     fps = cap.get(cv2.CAP_PROP_FPS)
-    ori_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    ori_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    l_c, r_c = 300,500
-    o_c,u_c = 250, 400
-    x1, x2 = l_c, ori_width - r_c
-    y1, y2 = o_c, ori_height - u_c
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    x1, x2 = 300, width-500
+    y1, y2 = 250, 700
     # x1, x2 = 0, width
     # y1, y2 = 0, height
     width = x2-x1
     height = y2-y1
-    cam_para = intrinsics_change.adjust_intrinsics(cam_para, x1, y1, width, height)
     print("width:",width)
     print("height:",height)
     # flame_num = [1,fm_max]   
     flame_num = [30000,31000]   
     fourcc = cv2.VideoWriter.fourcc(*'mp4v')
+    # fourcc = cv2.VideoWriter.fourcc(*'h264')
     infe_range = [flame_num[0],flame_num[1]]
-    sec = 1
-    step = int(fps*1) #sec秒ごとになるように設定
+    step = int(fps/1) #0.5秒ごとになるように設定
     infe_camera = 99
     filepath = video_path
     filename = os.path.splitext(os.path.basename(filepath))[0]
+    # pdb.set_trace()
     savepath = filepath.split(".")[0]
-    savefinalpath = f"{savepath}inf_result/x{l_c}{r_c}y{o_c}{u_c}_f{flame_num[0]}{flame_num[1]}_s{sec}"
-        ## フォルダを作成
-    if not os.path.exists(f"{savepath}inf_result"):
-        os.mkdir(f"{savepath}inf_result")
-    os.chmod(f"{savepath}inf_result", 0o777)
-    if not os.path.exists(f"{savefinalpath}"):
-        os.mkdir(f"{savefinalpath}")
-    os.chmod(f"{savefinalpath}", 0o777)
-    out = cv2.VideoWriter(f"{savefinalpath}/output_video2.mp4", fourcc, fps/step, (width, height))
-    out2 = cv2.VideoWriter(f"{savefinalpath}/depth.mp4", fourcc, fps/step, (width, height))
+    out = cv2.VideoWriter(f"{savepath}inf_result/output_video2.mp4", fourcc, fps/step, (width, height))
+    out2 = cv2.VideoWriter(f"{savepath}inf_result/depth.mp4", fourcc, fps/step, (width, height))
+    
+    # pdb.set_trace()
 else:
     infe_range = [0,0]
     infe_camera = 99
     step = 1
 
-#空箱作成
-# 要素の数を計算
-element_count = ((infe_range[1] - infe_range[0] + 1) + step - 1) // step
-# 箱を作成（例えば、ゼロで初期化されたリスト）
-time = [0] * element_count
-tracking = [0] * element_count
-depth = [[0 for _ in range(element_count)] for _ in range(10)]
-bb_x = [[0 for _ in range(element_count)] for _ in range(10)]
-bb_y = [[0 for _ in range(element_count)] for _ in range(10)]
-# pdb.set_trace()
-tmp_time = 0
-roop_count = 0
 
 for i in range(infe_range[0],infe_range[1]+1,step):
     # i/2の余りを計算
     remainder = i%2     
     device = torch.device(f"cuda:{remainder}" if torch.cuda.is_available() else "cpu")
+    # pdb.set_trace()
     if data_type == "dataset":
         add_idx = i #range内のどこのデータを表示するか指定します。
         print(durations[i])       
@@ -191,6 +152,8 @@ for i in range(infe_range[0],infe_range[1]+1,step):
         filename = filepath.split("/")[-1]
         filename = filename.split(".")[0]#数字部分のみ抽出して数値に変換
         # rgb, intrinsics, filepath, filename, depth_origin = DisplayDataset.infer(dataset,add_idx,infe_camera)#rgb:torch.Size([1, 3, 400, 879]),depth_origin:torch.Size([1, 1, 400, 879])
+        
+        # pdb.set_trace()
         rgb_disp = rgb.squeeze().cpu().detach().numpy()
         rgb_disp = np.transpose(rgb_disp, (1, 2, 0))
         rgb_disp = cv2.cvtColor((rgb_disp*255).astype(np.uint8),cv2.COLOR_RGB2BGR)#(400, 879, 3)
@@ -214,11 +177,62 @@ for i in range(infe_range[0],infe_range[1]+1,step):
         rgb_disp = cv2.imread(img_file)
 
 
-    rgb2, intrinsics2 = intrinsics_change.resize_rgb_intrinsics(rgb, intrinsics)
-    # rgb2, intrinsics2 = resize_to_nearest_32_multiple_and_max_pixels(rgb, intrinsics, max_pixels=100000)
+    ##時短用
+    # rgbサイズを384*640に変換し、それに合わせてintrinsicsも変換する関数
+    def resize_rgb_intrinsics(rgb, intrinsics):
+        #圧縮する幅と高さを決める
+        t_hight = 384
+        t_width = 640
+        #rgbの幅と高さを取得
+        rgb_h, rgb_w = rgb.shape[2], rgb.shape[3]
+        #rgbを[1,3,height,width]の形状から[1,3,384,640]の形状に変換
+        resized_rgb = rgb.clone()
+        # resized_rgb = F.interpolate(rgb, size=(384, 640), mode='bilinear', align_corners=False)
+        # resized_rgb = F.interpolate(rgb, size=(t_hight, t_width), mode='bilinear', align_corners=False)
+        resized_rgb = F.interpolate(rgb, size=(t_hight, t_width), mode='nearest')
+        intrinsics2 = intrinsics.clone() 
+        intrinsics2[0,0,0] = intrinsics[0,0,0].item()*t_width/rgb_w
+        intrinsics2[0,0,2] = intrinsics[0,0,2].item()*t_width/rgb_w
+        intrinsics2[0,1,1] = intrinsics[0,1,1].item()*t_hight/rgb_h
+        intrinsics2[0,1,2] = intrinsics[0,1,2].item()*t_hight/rgb_h
+        return resized_rgb, intrinsics2
+       
+    # def resize_to_nearest_32_multiple_and_max_pixels(rgb, intrinsics, max_pixels):
+    #     # 元の画像の幅と高さを取得
+    #     original_height, original_width = rgb.shape[2], rgb.shape[3]
 
+    #     # オリジナルのアスペクト比を計算
+    #     aspect_ratio = original_width / original_height
+
+    #     # 最も近い32の倍数に調整
+    #     new_height = round(original_height / 32) * 32
+    #     new_width = round(new_height * aspect_ratio / 32) * 32
+
+    #     # 指定された最大ピクセル数を超えないように調整
+    #     while new_height * new_width > max_pixels:
+    #         new_height -= 32
+    #         new_width = round(new_height * aspect_ratio / 32) * 32
+
+    #     # 画像をリサイズ
+    #     # resized_rgb = F.interpolate(rgb, size=(new_height, new_width), mode='bilinear', align_corners=False)
+    #     resized_rgb = F.interpolate(rgb, size=(new_height, new_width), mode='nearest')
+    #     #nearest, bilinear, bicubic, area
+    #     # 内部パラメータの調整
+    #     intrinsics_scaled = intrinsics.clone()
+    #     intrinsics_scaled[0, 0, 0] *= new_width / original_width
+    #     intrinsics_scaled[0, 0, 2] *= new_width / original_width
+    #     intrinsics_scaled[0, 1, 1] *= new_height / original_height
+    #     intrinsics_scaled[0, 1, 2] *= new_height / original_height
+
+    #     return resized_rgb, intrinsics_scaled
+
+    
+
+    rgb2, intrinsics2 = resize_rgb_intrinsics(rgb, intrinsics)
+    # rgb2, intrinsics2 = resize_to_nearest_32_multiple_and_max_pixels(rgb, intrinsics, max_pixels=100000)
+    # rgb2, intrinsics2 = resize_to_nearest_32_multiple_and_max_pixels(rgb, intrinsics, max_pixels=200000)
+    # rgb2, intrinsics2 = resize_to_nearest_32_multiple(rgb, intrinsics)
     # pdb.set_trace()
-    print("ori_rgb.shape",[ori_height,ori_width])
     print("rgb.shape",rgb.shape)
     print("rgb2.shape",rgb2.shape)
     print("intrinsics",intrinsics)
@@ -237,6 +251,8 @@ for i in range(infe_range[0],infe_range[1]+1,step):
     intrinsics2= intrinsics2.cpu().detach()
     rgb = rgb.cpu().detach()
     intrinsic = intrinsics2[0].cpu().detach()
+    # print("depth_pred:",depth_pred.shape)#True:torch.Size([1, 1, 400, 879]) False:torch.Size([1, 1, 384, 640])
+    # print("depth_origin:",depth_origin.shape)#True:torch.Size([1, 1, 400, 879]) False:torch.Size([1, 1, 384, 640])
     
     # 正解Depthと予測Deothの誤差をhuber関数で比較
     def masked_huber_loss(pred, target, threshold=0, delta=1.0):
@@ -252,6 +268,10 @@ for i in range(infe_range[0],infe_range[1]+1,step):
 
     
     loss, loss_abs = masked_huber_loss(depth_pred, depth_origin)
+    # print("loss:",loss)
+    # print("loss_mean:",loss.mean().item())
+    # print("loss_abs:",loss_abs)
+    # print("loss_abs_mean:",loss_abs.mean().item())
     
     ## depthをNumPy配列に変換して勾配情報を切り離して、CPUに送って、次元削減
     depth_pred_np = depth_pred.squeeze().cpu().detach().numpy()#True:(400, 879) False:(384, 640)
@@ -274,8 +294,7 @@ for i in range(infe_range[0],infe_range[1]+1,step):
     mask_o10 = (loss_abs_np>=2).astype(np.float32)
     loss_abs_o10 = loss_abs_np * mask_o10 
     # viz_depthを使ってdepthを可視化
-    # pdb.set_trace()
-    depth_rgb_image_vizdepth = viz_depth(depth_pred_np, filter_zeros=True, percentile=100) 
+    depth_rgb_image_vizdepth = viz_depth(depth_pred_np, filter_zeros=True) 
     depth_origin_image_vizdepth = viz_depth(depth_origin_np, filter_zeros=True) 
     loss_image_vizdepth = viz_inv_depth(loss_np, filter_zeros=True)
     loss_abs_image_vizdepth = viz_inv_depth(loss_abs_np, filter_zeros=True)
@@ -283,12 +302,15 @@ for i in range(infe_range[0],infe_range[1]+1,step):
 
     
     ## YOLOv8推論    
+    # rgb_disp_gpu = torch.tensor(rgb_disp).to(YOLO_device)
     seg_results = seg_model.track(rgb_disp, show=False, conf=YOLO_conf, persist=True, save=False,
-                                  save_txt=False, project=f"{savepath}inf_result/YOLO_seg{infe_camera}_{filename[0]}",
-                                  classes = [0,2,3,5,7,11])#person,car,motorcycle,bus,truck,9:traffic light,stop sign
+                                  save_txt=False, project=f"{savepath}inf_result/YOLO_seg{infe_camera}_{filename[0]}")#,
+                                  #classes = [0,2,3,5,7,11])#person,car,motorcycle,bus,truck,9:traffic light,stop sign
+    #retina_masks=True,
     seg_result = seg_results[0]
 
-    
+    pdb.set_trace()
+    # print("seg_result:",seg_result_box.device)
     ## seg_result.masks.dataのshapeをtorch.Size([7, 320, 640])からtorch.Size([7, 400, 879])に変更
     if seg_result.masks is not None:
         seg_result_masks_gpu = seg_result.masks.data.to(device).detach() #torch.Size([3, 384, 640])
@@ -302,6 +324,8 @@ for i in range(infe_range[0],infe_range[1]+1,step):
                                     mode='nearest').squeeze(0)            # バッチ次元を削除
         seg_result_masks_gpu = seg_result_masks_gpu.cpu()
         ## depth_predのセグメンテーション範囲のみを抽出
+        # pdb.set_trace()
+        # depth_pred = depth_pred.to(device)
         depth_map = depth_pred.to(device).squeeze()  # 結果はtorch.Size([400, 879])
         depth_true_map = depth_origin.to(device).squeeze() #torch.Size([400, 879])
         # Depthをマスクの数だけチャネル方向に複製します。
@@ -319,11 +343,30 @@ for i in range(infe_range[0],infe_range[1]+1,step):
         resized_masks = resized_masks.cpu()
         masked_depth = masked_depth.cpu()
         masked_true_depth = masked_true_depth.cpu()
-       
+        # 0を除いた上で10-90%パーセンタイルの値を保持する関数
+        def percentile_threshold_exclude_zero(tensor, lower_percentile, upper_percentile):
+            # バッチの各要素に対してパーセンタイルを計算し適用
+            percentile_masks = []
+            for i in range(tensor.shape[0]):  # バッチサイズの次元をループ
+                data = tensor[i][tensor[i] > 0].view(-1)  # 0を除外して1Dにフラット化
+                if data.numel() == 0:  # データがない場合はマスクを適用しない
+                    percentile_masks.append(torch.zeros_like(tensor[i], dtype=torch.bool))
+                    continue
+                k_lower = max(int(len(data) * lower_percentile / 100), 1)  # kは最小でも1である必要がある
+                k_upper = min(int(len(data) * upper_percentile / 100), len(data))  # kは最大でdataの要素数
+                k_upper = max(k_upper, k_lower)  # k_upperはk_lower以上であることを保証
+                lower = torch.kthvalue(data, k_lower).values
+                upper = torch.kthvalue(data, k_upper).values
+                mask = (tensor[i] >= lower) & (tensor[i] <= upper)
+                percentile_masks.append(mask)
 
+            # マスクを適用して結果を返す
+            return torch.stack(percentile_masks) * tensor
+        # pdb.set_trace()
         # 0を除いたパーセンタイルフィルターを適用
-        masked_depth = functions.percentile_threshold_exclude_zero(masked_depth, 0, 100)
-        masked_true_depth = functions.percentile_threshold_exclude_zero(masked_true_depth, 0, 100)
+        # pdb.set_trace()
+        masked_depth = percentile_threshold_exclude_zero(masked_depth, 0, 100)
+        masked_true_depth = percentile_threshold_exclude_zero(masked_true_depth, 0, 100)
       
         #マスク範囲を表示
         # mask_disp(masked_depth,masked_true_depth)
@@ -398,14 +441,20 @@ for i in range(infe_range[0],infe_range[1]+1,step):
     # ave_obj_true_depth_all = np.concatenate([ave_obj_true_depth_all,ave_obj_true_depth.detach().numpy()])
     # ave_obj_depth_all = np.concatenate([ave_obj_depth_all,ave_obj_depth.detach().numpy()])
     # print("rgb_text:",rgb_text.shape)#(720, 1280, 3)
-
+    ## フォルダを作成
+    if not os.path.exists(f"{savepath}inf_result"):
+        os.mkdir(f"{savepath}inf_result")
+    os.chmod(f"{savepath}inf_result", 0o777)
+    if not os.path.exists(f"{savepath}inf_result/hoge"):
+        os.mkdir(f"{savepath}inf_result/hoge")
+    os.chmod(f"{savepath}inf_result", 0o777)
 
     ## input（RGB）を保存
     # cv2.imwrite(f"{savepath}inf_result/rgb_input{infe_camera}_{filename[0]}.png", rgb_disp)
-    cv2.imwrite(f"{savefinalpath}/rgb_text{infe_camera}_{filename}_{i}.png", rgb_text)
+    cv2.imwrite(f"{savepath}inf_result/hoge/rgb_text{infe_camera}_{filename}_{i}.png", rgb_text)
     # cv2.imwrite(f"{savepath}inf_result/rgb_true_text{infe_camera}_{filename[0]}.png", rgb_true_text)
     # depthのoutput（カラー、TRIバージョン）を保存
-    write_image(f"{savefinalpath}/depth_c_inv{infe_camera}_{filename}_{i}.png", depth_rgb_image_vizdepth)
+    # write_image(f"{savepath}inf_result/depth_c_inv{infe_camera}_{filename}_{i}.png", depth_rgb_image_vizdepth)
     # write_image(f"{savepath}inf_result/depth_true_inv{infe_camera}_{filename}.png", depth_origin_image_vizdepth)
     # write_image(f"{savepath}inf_result/loss_{infe_camera}_{filename[0]}.png", loss_image_vizdepth)
     # write_image(f"{savepath}inf_result/loss_abs{infe_camera}_{filename}.png", loss_abs_image_vizdepth)
@@ -415,6 +464,13 @@ for i in range(infe_range[0],infe_range[1]+1,step):
     if data_type == "VIDEO" or "dataset":
         out.write(rgb_text)
         depth_rgb_image_vizdepth2= (255 * depth_rgb_image_vizdepth[:, :, ::-1]).astype(np.uint8)
+        # image = cv2.imread(depth_rgb_image_vizdepth)
+        # # 読み込んだ画像データがnumpy.ndarrayオブジェクトなのを確認して、
+        # # video writerに書き込みます。
+        # if image is not None and isinstance(image, np.ndarray):
+        #     out2.write(depth_rgb_image_vizdepth2)
+        # else:
+        #     print("読み込んだ画像が正しくありません")
         out2.write(depth_rgb_image_vizdepth2)
     else:
         pass
@@ -428,34 +484,12 @@ for i in range(infe_range[0],infe_range[1]+1,step):
     
     #結果をヒストグラムでプロット
     if seg_result.masks is not None:   
-        compare_distribution(masked_true_depth, masked_depth, savefinalpath, infe_camera, filename)#各物体の距離分布
+        compare_distribution(masked_true_depth, masked_depth, savepath, infe_camera, filename)#各物体の距離分布
         # compare_distribution(filtered_masked_true_depth_ex_zero, filtered_masked_depth_ex_zero, savepath, infe_camera, filename)#各物体の距離分布（パーセンタイル補正後）
         # compare_true_pred(ave_obj_true_depth, ave_obj_depth, savepath, infe_camera, filename)#各物体の距離プロット比較
         # plot_distribution(depth_origin_np, depth_pred_np, loss_np, loss_abs_np, savepath, infe_camera, filename)
-    compare_true_pred(ave_obj_true_depth_all, ave_obj_depth_all, savefinalpath, infe_camera, filename="all")#各物体の距離プロット比較（データ全体）
+    compare_true_pred(ave_obj_true_depth_all, ave_obj_depth_all, savepath, infe_camera, filename="all")#各物体の距離プロット比較（データ全体）
     # print(torch.cuda.memory_summary(device=None, abbreviated=False))
-    
-    #データを解析用に保存
-    if data_type == "dataset":
-        tmp_time = tmp_time + durations[i]
-    elif data_type == "VIDEO":
-        tmp_time = (i-infe_range[0])/fps
-
-        
-    time[roop_count] = tmp_time
-    tracking[roop_count] = seg_result.boxes.is_track
-    # pdb.set_trace()
-    for m in range(len(seg_result.boxes.id)):
-        id_num = int(seg_result.boxes.id[0].item())
-        depth[id_num][roop_count] = ave_obj_depth[m]
-        bb_x[id_num][roop_count] = seg_result.boxes.xyxy[m][0]
-        bb_y[id_num][roop_count] = seg_result.boxes.xyxy[m][1]
-    roop_count = roop_count + 1
-    # pdb.set_trace()
-    print("time",time)
-    print("トラッキング", seg_result.boxes.is_track)
-    # print("トラッキング", seg_result.boxes.is_track)
-
     
     del zerodepth_model,depth_pred,rgb,rgb2,intrinsics,intrinsics2,depth_pred_np,depth_origin_np,loss_np,loss_abs_np
     del seg_results,depth_origin
@@ -467,7 +501,6 @@ for i in range(infe_range[0],infe_range[1]+1,step):
     print(f"{i}ループ目終了")
     print(f"データ{filename}を{savepath}inf_resultに保存したよ")
 
-np.savez(f"{savefinalpath}/data.npz", time, tracking, depth, bb_x, bb_y)
 subprocess.run(['chmod', '-R', '777', f'{savepath}inf_result'], check=True)    
     
 if data_type == "VIDEO":

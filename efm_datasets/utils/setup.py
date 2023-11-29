@@ -19,6 +19,7 @@ def setup_dataset(cfg, root='efm_datasets/dataloaders'):
     shared_keys = ['context', 'labels', 'labels_context']
 
     num_datasets = 0
+    # pdb.set_trace()
     for key, val in cfg.__dict__.items():
         if key not in shared_keys and not is_namespace(val):
             num_datasets = max(num_datasets, len(val))

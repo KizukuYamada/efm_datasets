@@ -7,7 +7,7 @@ import yaml
 
 from efm_datasets.utils.data import make_list, num_trainable_params
 from efm_datasets.utils.types import is_dict, is_list, is_namespace, is_module_dict
-
+import pdb
 
 def cfg_has(*args):
     """Check if key is in configuration"""
@@ -178,6 +178,7 @@ def load_class(filename, paths, concat=True, methodname=None):
         Loaded method
     """
     # If method name is not given, use filename
+    # pdb.set_trace()
     methodname = make_list(filename if methodname is None else methodname)
     # for each path in paths
     for path in make_list(paths):

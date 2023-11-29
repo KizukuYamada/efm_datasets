@@ -8,6 +8,7 @@ import numpy as np
 import os
 import ast
 import re
+import glob
 
 def extract_numbers_and_format(content):
     # 文字列から数字を見つける
@@ -55,7 +56,7 @@ def get_frame_as_base64(video_path, frame_number):
     # 画像を指定されたパスに保存
     # pdb.set_trace()
     save_directory = os.path.dirname(video_path)
-    save_directory = os.path.join(save_directory, "GTP4_vision_preview2")
+    save_directory = os.path.join(save_directory, "GTP4_vision_preview3")
     save_filename = os.path.join(save_directory, f"frame_{frame_number}.jpg")
     if not os.path.exists(save_directory):
         os.makedirs(save_directory)
@@ -67,19 +68,32 @@ def get_frame_as_base64(video_path, frame_number):
     
     return img_str
 
+def get_image_as_base64(image_path):
+    # 画像を読み込む
+    with open(image_path, "rb") as image_file:
+        encoded_string = base64.b64encode(image_file.read()).decode()
+
+    return encoded_string
+
 # 使用例
 # video_path = '/mnt/fsx/datasets/Platooning/20210916_084834000_iOS_short.mp4'
 video_path = '/mnt/fsx/datasets/Platooning/20210916_084834000_iOS.mov'
 npy_path = 'selected_frames.npy' 
+image_folder = '/mnt/fsx/datasets/Platooning/GTP4_vision_preview2/cropped_images'
+# フォルダ内の全JPEGファイルを取得
+image_files = sorted(glob.glob(os.path.join(image_folder, '*.jpg')))
 # analysis_num = [78000,79000]
 analysis_num = np.load(npy_path)
 
 answer_list= np.zeros((len(analysis_num), 2), dtype=int)
-# answer_list[0,2] = 3
-for i in range(len(analysis_num)):
-    # pdb.set_trace()
-    frame_number = analysis_num[i]  # 取得したいフレーム番号
-    base64_image = get_frame_as_base64(video_path, frame_number)
+
+# for i in range(len(analysis_num)):
+#     # pdb.set_trace()
+#     frame_number = analysis_num[i]  # 取得したいフレーム番号
+#     base64_image = get_frame_as_base64(video_path, frame_number)
+    
+for i, image_path in enumerate(image_files):
+    base64_image = get_image_as_base64(image_path)
 
     # def encode_image(image_path):
     #     with open(image_path, "rb") as image_file:
@@ -98,7 +112,8 @@ for i in range(len(analysis_num)):
                 "content": [
                     # {"type": "text", "text": "この画像は、日本の高速道路を進行方向に向かって撮影しているものだよ。前方の白い車は、左から数えて何番目の車線を走行してる？また、この画像は左から数えて何番目の車線から撮影されてる？ここが工事区間かどうかも教えて。回答の形式は全て数字のみで、[白い車の走行車線,撮影車線,工事区間かどうか]でお願いします。工事区間かどうかについては、工事区間だったら1を、そうでなかったら0で回答お願い。もしわからないとか、うまく答えられないときは、その要素の数字を9にしといて。"},
                     # {"type": "text", "text": "この画像は、日本の高速道路を進行方向に向かって撮影しているものだよ。前方の白い車は、左から数えて何番目の車線を走行してる？回答の形式は数字のみでお願いします。もしわからないとか、うまく答えられないときは、その要素の数字を9にしといて。"},
-                    {"type": "text", "text": "この画像は、日本の高速道路を進行方向に向かって撮影しているものだよ。この画像は左から数えて何番目の車線から撮影されてる？回答の形式は数字のみでお願いします。もしわからないとか、うまく答えられないときは、その要素の数字を9にしといて。"},
+                    # {"type": "text", "text": "この画像は、日本の高速道路を進行方向に向かって撮影しているものだよ。この画像は左から数えて何番目の車線から撮影されてる？回答の形式は数字のみでお願いします。もしわからないとか、うまく答えられないときは、その要素の数字を9にしといて。"},
+                    {"type": "text", "text": "この画像は、日本の高速道路を進行方向に向かって撮影しているものだよ。ここが工事区間かどうかも教えて。回答の形式は数字のみでお願いします。工事区間の場合は1を、違う場合は0を、わからないとかうまく答えられないときは、9を回答して。"},
                     {
                         "type": "image_url",
                         "image_url": {
@@ -123,13 +138,15 @@ for i in range(len(analysis_num)):
     # pdb.set_trace()
     print(answer)
     # answer_i_list = [frame_number, answer[0], answer[1], answer[2]]
-    answer_i_list = [frame_number, answer]
+    # answer_i_list = [frame_number, answer]
+    answer_i_list = [i, answer]
     answer_list[i] = answer_i_list
     # pdb.set_trace()
 
 #answer_listをvido_pathのところに保存
-save_directory = os.path.dirname(video_path)
-save_directory = os.path.join(save_directory, "GTP4_vision_preview")
+# save_directory = os.path.dirname(video_path)
+save_directory = os.path.dirname(image_folder)
+# save_directory = os.path.join(save_directory, "GTP4_vision_preview3")
 save_filename = os.path.join(save_directory, f"answer_list.txt")
 if not os.path.exists(save_directory):
     os.makedirs(save_directory)

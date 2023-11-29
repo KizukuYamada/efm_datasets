@@ -7,6 +7,7 @@ from matplotlib.cm import get_cmap
 from efm_datasets.utils.decorators import iterate1
 from efm_datasets.utils.depth import depth2inv
 from efm_datasets.utils.types import is_tensor, is_list
+import pdb
 
 
 def flow_to_color(flow_uv, clip_flow=None):
@@ -87,6 +88,8 @@ def viz_inv_depth(inv_depth, normalizer=None, percentile=95,
         else:
             normalizer = np.percentile(
                 inv_depth[inv_depth > 0] if filter_zeros else inv_depth, percentile)
+            normalizer = 0.1
+    # pdb.set_trace()
     inv_depth = inv_depth / (normalizer + 1e-6)
     colormap = cm(np.clip(inv_depth, 0., 1.0))[:, :, :3]
     colormap[inv_depth == 0] = 0

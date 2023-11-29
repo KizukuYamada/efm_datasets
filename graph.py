@@ -46,7 +46,7 @@ def plot_distribution(depth_origin_np, depth_pred_np, loss_np,loss_abs_np, savep
     plt.savefig(f"{savepath}inf_result/loss_abs_plot2{infe_camera}_{filename}.png")
     plt.show()  
     
-def compare_distribution(masked_true_depth, masked_depth, savepath, infe_camera, filename):
+def compare_distribution(masked_true_depth, masked_depth, savefinalpath, infe_camera, filename):
     #データをnpのint型で1次元に変換
     if torch.is_tensor(masked_true_depth):
         masked_true_depth_np = masked_true_depth.cpu().detach().numpy()
@@ -121,7 +121,7 @@ def compare_distribution(masked_true_depth, masked_depth, savepath, infe_camera,
 
 
     plt.tight_layout()
-    plt.savefig(f"{savepath}inf_result/obj_depth_{infe_camera}_{filename}.png")
+    plt.savefig(f"{savefinalpath}/obj_depth_{infe_camera}_{filename}.png")
     # plt.show()  
     
     
@@ -161,7 +161,7 @@ def mask_disp(masked_depth,masked_true_depth):
 def plot_time():
     return
             
-def compare_true_pred(ave_obj_true_depth, ave_obj_depth, savepath, infe_camera, filename):
+def compare_true_pred(ave_obj_true_depth, ave_obj_depth, savefinalpath, infe_camera, filename):
     axes = plt.subplots(1, 3, figsize=(12, 4))
     # GPU上にあるテンソルの場合、まずCPUに移動させる
     if torch.is_tensor(ave_obj_true_depth):
@@ -224,7 +224,7 @@ def compare_true_pred(ave_obj_true_depth, ave_obj_depth, savepath, infe_camera, 
 
     # グラフを表示
     plt.tight_layout()  # グラフ間のスペースを調整
-    plt.savefig(f"{savepath}inf_result/Compare_TP_{infe_camera}_{filename}.png")
+    plt.savefig(f"{savefinalpath}/Compare_TP_{infe_camera}_{filename}.png")
     # plt.show()
     
     return

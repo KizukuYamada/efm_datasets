@@ -8,6 +8,7 @@ from efm_datasets.utils.geometry.camera import Camera
 from efm_datasets.utils.decorators import iterate1
 from efm_datasets.utils.tensor import same_shape
 from efm_datasets.utils.types import is_tensor, is_numpy, is_list, is_dict
+import pdb
 
 
 @iterate1
@@ -60,6 +61,7 @@ def depth2inv(depth):
     else:
         raise NotImplementedError('Wrong depth format')
     inv_depth[depth <= 0.] = 0.
+    # pdb.set_trace()
     return inv_depth
 
 

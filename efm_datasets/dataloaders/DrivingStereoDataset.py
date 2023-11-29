@@ -88,6 +88,7 @@ class DrivingStereoDataset(BaseDataset):
         self.paths = []
         # Get file list from data
         for i, fname in enumerate(data):
+            # pdb.set_trace()
             path = os.path.join(self.path, fname.split()[0])
             add_flag = True
             if add_flag and self.with_depth:
@@ -99,7 +100,7 @@ class DrivingStereoDataset(BaseDataset):
                 self.paths.append(path)
         
         # If using context, filter file list
-        
+        # pdb.set_trace()
         if self.with_context:
             paths_with_context = []
             for stride in [1]:
@@ -107,6 +108,9 @@ class DrivingStereoDataset(BaseDataset):
                     backward_context_idxs, forward_context_idxs = \
                         self._get_sample_context(
                             file, self.bwd_context, self.fwd_context, stride)
+                        # self._get_sample_context(
+                        #     file, self.bwd_context, self.fwd_context, stride, self.paths[0], self.paths[-1])
+                        
                     
                     if backward_context_idxs is not None and forward_context_idxs is not None:
                         exists = True
@@ -222,8 +226,8 @@ class DrivingStereoDataset(BaseDataset):
             max_num_files = self._cache[parent_folder]
         else:
             max_num_files = len(glob.glob(os.path.join(parent_folder, '*' + ext)))
-            self._cache[parent_folder] = max_num_files
-
+            self._cache[parent_folder] = max_num_files               
+    
         # Check bounds
         if (f_idx - backward_context * stride) < 0 or (
                 f_idx + forward_context * stride) >= max_num_files:
@@ -252,6 +256,56 @@ class DrivingStereoDataset(BaseDataset):
             return None, None
 
         return backward_context_idxs, forward_context_idxs
+
+    # def _get_sample_context(self, sample_name,
+    #                         backward_context, forward_context, stride=1, first_file=None, last_file=None):
+    #     """Get sample context"""
+    #     base, ext = os.path.splitext(os.path.basename(sample_name))
+    #     parent_folder = os.path.dirname(sample_name)
+    #     # 数字のみを抽出する正規表現
+    #     # pdb.set_trace()
+    #     base = re.sub(r'\D', '', base)
+    #     f_idx = int(base)
+
+    #     # Check number of files in folder
+    #     if parent_folder in self._cache:
+    #         max_num_files = self._cache[parent_folder]
+    #     else:
+    #         max_num_files = len(glob.glob(os.path.join(parent_folder, '*' + ext)))
+    #         self._cache[parent_folder] = max_num_files
+    #     # Get the 0 and max_num_files f_idx
+    #     #　フォルダ内の最初のファイル名を取得
+    #     idx0_base = int(re.sub(r'\D', '', os.path.basename(first_file)))
+    #     idxend_base = int(re.sub(r'\D', '', os.path.basename(last_file)))
+    #     # pdb.set_trace()      
+    #     # Check bounds
+    #     if (f_idx - backward_context * stride) < 0 or (
+    #             f_idx + forward_context * stride) >= idxend_base:
+    #         return None, None
+
+    #     # Backward context
+    #     c_idx = f_idx
+    #     backward_context_idxs = []
+    #     while len(backward_context_idxs) < backward_context and c_idx > 0:
+    #         c_idx -= stride
+    #         filename = self._get_next_file(c_idx, sample_name)
+    #         if os.path.exists(filename):
+    #             backward_context_idxs.append(c_idx)
+    #     if c_idx < 0:
+    #         return None, None
+
+    #     # Forward context
+    #     c_idx = f_idx
+    #     forward_context_idxs = []
+    #     while len(forward_context_idxs) < forward_context and c_idx < max_num_files:
+    #         c_idx += stride
+    #         filename = self._get_next_file(c_idx, sample_name)
+    #         if os.path.exists(filename):
+    #             forward_context_idxs.append(c_idx)
+    #     if c_idx >= max_num_files:
+    #         return None, None
+
+    #     return backward_context_idxs, forward_context_idxs
 
     def _get_context_files(self, sample_name, idxs):
         """Returns image and depth context files"""

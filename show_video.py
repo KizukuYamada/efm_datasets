@@ -7,7 +7,7 @@ def show_video_and_save_frames(video_path, start_frame, end_frame, step, save_pa
 
     # 選択されたフレーム番号を保存するためのリスト
     selected_frames = []
-
+    
     # 指定されたフレーム範囲でループ
     for frame_number in range(start_frame, end_frame + 1, step):
         # フレームを読み込む

@@ -97,3 +97,4 @@ def write_image(filename, image):
     # Otherwise, assume it's a PIL image
     else:
         image.save(filename)
+    # return np.clip(image, 0, 255).astype(np.uint8)
