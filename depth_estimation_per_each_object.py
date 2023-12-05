@@ -13,12 +13,13 @@ import sys
 import os
 import torch.nn.functional as F
 from YOLOv8.ultralytics import YOLO
-from graph import mask_disp, compare_distribution, compare_true_pred, plot_distribution
+from graph import mask_disp, compare_distribution, compare_true_pred, plot_distribution,plot_combined_time_series
 from functions import remove_outliers
 import datetime
 import subprocess
 import intrinsics_change
 import functions
+import csv_plot
 
 data_type = "VIDEO" #VIDEO,dataset,IMAGE
 img_file = 'YOLOv8/examples/bus.jpg'
@@ -148,6 +149,7 @@ elif data_type == "VIDEO":
     filepath = video_path
     filename = os.path.splitext(os.path.basename(filepath))[0]
     savepath = filepath.split(".")[0]
+    pdb.set_trace()
     savefinalpath = f"{savepath}inf_result/x{l_c}{r_c}y{o_c}{u_c}_f{flame_num[0]}{flame_num[1]}_s{sec}"
         ## フォルダを作成
     if not os.path.exists(f"{savepath}inf_result"):
@@ -446,14 +448,14 @@ for i in range(infe_range[0],infe_range[1]+1,step):
     tracking[roop_count] = seg_result.boxes.is_track
     # pdb.set_trace()
     for m in range(len(seg_result.boxes.id)):
-        id_num = int(seg_result.boxes.id[0].item())
-        depth[id_num][roop_count] = ave_obj_depth[m]
-        bb_x[id_num][roop_count] = seg_result.boxes.xyxy[m][0]
-        bb_y[id_num][roop_count] = seg_result.boxes.xyxy[m][1]
+        id_num = int(seg_result.boxes.id[m].item())
+        depth[id_num-1][roop_count] = ave_obj_depth[m]
+        bb_x[id_num-1][roop_count] = seg_result.boxes.xyxy[m][0]
+        bb_y[id_num-1][roop_count] = seg_result.boxes.xyxy[m][1]
     roop_count = roop_count + 1
     # pdb.set_trace()
-    print("time",time)
-    print("トラッキング", seg_result.boxes.is_track)
+    # print("time",time)
+    # print("トラッキング", seg_result.boxes.is_track)
     # print("トラッキング", seg_result.boxes.is_track)
 
     
@@ -466,6 +468,26 @@ for i in range(infe_range[0],infe_range[1]+1,step):
     torch.cuda.empty_cache()
     print(f"{i}ループ目終了")
     print(f"データ{filename}を{savepath}inf_resultに保存したよ")
+
+#結果を表示
+print("time",time)
+print("トラッキング", tracking)
+print("depth", depth)
+print("bb_x", bb_x)
+print("bb_y", bb_y)
+time = np.array(time)
+tracking = np.array(tracking)
+depth = np.array(depth)
+bb_x = np.array(bb_x)
+bb_y = np.array(bb_y)
+plot_combined_time_series(time, depth, bb_x, bb_y, tracking,savefinalpath, data_type, flame_num, fps)
+
+#正解データを表示
+if data_type == "VIDEO":
+    true_file_path = f'{os.path.dirname(savepath)}/@data_20231030163856.csv'
+    disp_time_csv = [flame_num[0]*fps,flame_num[1]*fps]
+    dif_time_fmcsv = 21
+    csv_plot.plot_time_series_from_csv(true_file_path, disp_time_csv[0]-dif_time_fmcsv, disp_time_csv[1]-dif_time_fmcsv, savefinalpath, flame_num, fps)
 
 np.savez(f"{savefinalpath}/data.npz", time, tracking, depth, bb_x, bb_y)
 subprocess.run(['chmod', '-R', '777', f'{savepath}inf_result'], check=True)    

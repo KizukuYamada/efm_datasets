@@ -5,8 +5,11 @@ import matplotlib.pyplot as plt
 import pdb
 import math
 import cv2 
-from efm_datasets.utils.viz import viz_depth,viz_inv_depth
+from efm_datasets.utils.viz import viz_depth
 import torch
+import os
+import csv_plot
+import pandas as pd
     
 def plot_distribution(depth_origin_np, depth_pred_np, loss_np,loss_abs_np, savepath, infe_camera, filename):
 
@@ -44,7 +47,7 @@ def plot_distribution(depth_origin_np, depth_pred_np, loss_np,loss_abs_np, savep
 
     plt.tight_layout()
     plt.savefig(f"{savepath}inf_result/loss_abs_plot2{infe_camera}_{filename}.png")
-    plt.show()  
+    # plt.show()  
     
 def compare_distribution(masked_true_depth, masked_depth, savefinalpath, infe_camera, filename):
     #データをnpのint型で1次元に変換
@@ -228,3 +231,134 @@ def compare_true_pred(ave_obj_true_depth, ave_obj_depth, savefinalpath, infe_cam
     # plt.show()
     
     return
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+def plot_combined_time_series(time, depth, bb_x, bb_y, tracking,savefinalpath,data_type,flame_num, fps):
+    """
+    Plots 'depth', 'bb_x', 'bb_y' time series data in the same subplot with different legends,
+    and 'tracking' in a separate subplot. All plots share the 'time' x-axis.
+
+    :param time: Time series data for the x-axis.
+    :param depth: Time series data for 'depth' with multiple columns.
+    :param bb_x: Time series data for 'bb_x' with multiple columns.
+    :param bb_y: Time series data for 'bb_y' with multiple columns.
+    :param tracking: Time series data for 'tracking' (single column).
+    """
+    # Create a figure and two subplots
+    fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=(10, 8), sharex=True)
+
+    # Plot 'depth', 'bb_x', 'bb_y' in the first subplot
+    for col in range(depth.shape[0]):
+        ax1.plot(time, depth[col,:], label=f'ID {col+1}')
+    if data_type == "VIDEO":
+        true_file_path = f'{os.path.dirname(savepath)}/@data_20231030163856 (copy).csv'
+        dif_time_fmcsv = 21
+        disp_time_csv = [flame_num[0]/fps-dif_time_fmcsv,flame_num[1]/fps-dif_time_fmcsv]
+        
+        # pdb.set_trace()
+        data = pd.read_csv(true_file_path, skiprows=4)
+        specific_signal_name = 'ltc_afl_g_fsn_dx_sel[0]'
+        specific_signal_name1 = 'ltc_afl_g_fsn_dx_sel[1]'
+        specific_signal_name2 = 'ltc_afl_g_fsn_dx_sel[2]'
+        specific_signal_name3 = 'ltc_afl_g_fsn_dx_sel[3]'
+        specific_signal_name4 = 'ltc_afl_g_fsn_dx_sel[4]'
+        specific_signal_name5 = 'ltc_afl_g_fsn_dx_sel[5]'
+        # last0 = 'ltc_afl_g_fsn_dx_last[0]'
+        # last1 = 'ltc_afl_g_fsn_dx_last[1]'
+        # last2 = 'ltc_afl_g_fsn_dx_last[2]'
+        # last3 = 'ltc_afl_g_fsn_dx_last[3]'
+        # last4 = 'ltc_afl_g_fsn_dx_last[4]'
+        # last5 = 'ltc_afl_g_fsn_dx_last[5]'
+        # last6 = 'ltc_afl_g_fsn_dx_last[6]'
+        # last7 = 'ltc_afl_g_fsn_dx_last[7]'
+        # last8 = 'ltc_afl_g_fsn_dx_last[8]'
+        # last9 = 'ltc_afl_g_fsn_dx_last[9]'
+        time_column = data.columns[0]
+        
+        sel_data = data[(data[time_column] >= disp_time_csv[0]) & (data[time_column] <= disp_time_csv[1])]
+        signal_columns = [col for col in data.columns if specific_signal_name in col]
+        n0_distance_data = data[(data[signal_columns] >= disp_time_csv[0]) & (data[signal_columns] <= disp_time_csv[1])]
+        # pdb.set_trace()
+        ax1.plot(sel_data["#time_Rate1[sec]"]-sel_data["#time_Rate1[sec]"].iloc[0], sel_data[specific_signal_name], linestyle=':', label=f'{specific_signal_name}')
+        ax1.plot(sel_data["#time_Rate1[sec]"]-sel_data["#time_Rate1[sec]"].iloc[0], sel_data[specific_signal_name1], linestyle=':', label=f'{specific_signal_name1}')
+        ax1.plot(sel_data["#time_Rate1[sec]"]-sel_data["#time_Rate1[sec]"].iloc[0], sel_data[specific_signal_name2], linestyle=':', label=f'{specific_signal_name2}')
+        ax1.plot(sel_data["#time_Rate1[sec]"]-sel_data["#time_Rate1[sec]"].iloc[0], sel_data[specific_signal_name3], linestyle=':', label=f'{specific_signal_name3}')
+        ax1.plot(sel_data["#time_Rate1[sec]"]-sel_data["#time_Rate1[sec]"].iloc[0], sel_data[specific_signal_name4], linestyle=':', label=f'{specific_signal_name4}')
+        ax1.plot(sel_data["#time_Rate1[sec]"]-sel_data["#time_Rate1[sec]"].iloc[0], sel_data[specific_signal_name5], linestyle=':', label=f'{specific_signal_name5}')
+        ax1.plot(sel_data["#time_Rate1[sec]"]-sel_data["#time_Rate1[sec]"].iloc[0], sel_data[specific_signal_name], linestyle=':', label=f'{specific_signal_name}')
+        ax1.plot(sel_data["#time_Rate1[sec]"]-sel_data["#time_Rate1[sec]"].iloc[0], sel_data[specific_signal_name1], linestyle=':', label=f'{specific_signal_name1}')
+        ax1.plot(sel_data["#time_Rate1[sec]"]-sel_data["#time_Rate1[sec]"].iloc[0], sel_data[specific_signal_name2], linestyle=':', label=f'{specific_signal_name2}')
+        ax1.plot(sel_data["#time_Rate1[sec]"]-sel_data["#time_Rate1[sec]"].iloc[0], sel_data[specific_signal_name3], linestyle=':', label=f'{specific_signal_name3}')
+        ax1.plot(sel_data["#time_Rate1[sec]"]-sel_data["#time_Rate1[sec]"].iloc[0], sel_data[specific_signal_name4], linestyle=':', label=f'{specific_signal_name4}')
+        ax1.plot(sel_data["#time_Rate1[sec]"]-sel_data["#time_Rate1[sec]"].iloc[0], sel_data[specific_signal_name5], linestyle=':', label=f'{specific_signal_name5}')
+    y_min = -20  # y軸の最小値
+    y_max = 80  # y軸の最大値
+    ax1.set_ylim(y_min, y_max)
+    ax1.set_title('Depth')
+    ax1.legend(loc='upper left', bbox_to_anchor=(1,1), ncol=2, fontsize='small')
+    
+        # Plot 'depth', 'bb_x', 'bb_y' in the first subplot
+    for col in range(depth.shape[0]):
+        ax2.plot(time, bb_x[col,:], linestyle='--')
+        
+    ax2.set_title('BB_X')
+    ax2.legend()
+
+    for col in range(depth.shape[0]):
+        ax3.plot(time, bb_y[col,:], linestyle=':')
+
+    ax3.set_title('BB_Y')
+    ax3.legend()
+
+    # Plot 'tracking' in the second subplot
+    ax4.plot(time, tracking, label='Tracking', color='k')
+    ax4.set_title('Tracking')
+    ax4.legend()
+
+    # Set a common x-label
+    plt.xlabel('Time')
+
+    # Adjust layout
+    plt.tight_layout()
+
+    # Show the plot
+    plt.savefig(f"{savefinalpath}/time_flow.png")
+    plt.show()
+
+# Example usage with sample data
+# Generating sample data
+# np.random.seed(0) # For reproducibility
+# time_points = 100 # Number of time points
+
+# # Create sample data for each time series
+# time_data = np.linspace(0, 10, time_points)
+# depth_data = np.random.randn(time_points).cumsum()
+# bb_x_data = np.random.randn(time_points).cumsum()
+# bb_y_data = np.random.randn(time_points).cumsum()
+# tracking_data = np.random.randn(time_points).cumsum()
+
+# #時短用
+if __name__ == '__main__':
+    savepath = "/data/datasets/Platooning/20231030/20231030/nobori/20231030_065630000_iOS"
+    savefinalpath = "/data/datasets/Platooning/20231030/20231030/nobori/20231030_065630000_iOSinf_result/x300500y250400_f3000031000_s1"
+    loaded_data = np.load(f"{savefinalpath}/data.npz")
+    time_data = loaded_data['arr_0']
+    tracking_data = loaded_data['arr_1']
+    depth_data = loaded_data['arr_2']
+    bb_x_data = loaded_data['arr_3']
+    bb_y_data = loaded_data['arr_4']
+    print("time_data",time_data.shape)
+    print("depth_data",depth_data.shape)
+    print("bb_x_data",bb_x_data.shape)
+    print("bb_y_data",bb_y_data.shape)
+    print("tracking_data",tracking_data.shape)
+    data_type = "VIDEO"
+    flame_num = [30000,31000]
+    fps = 30
+    # pdb.set_trace()
+
+    # Plot the time series
+    plot_combined_time_series(time_data, depth_data, bb_x_data, bb_y_data, tracking_data, savefinalpath,data_type,flame_num, fps)
+
